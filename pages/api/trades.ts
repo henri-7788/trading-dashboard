@@ -16,7 +16,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .order('datum', { ascending: false })
 
       if (error) throw error
-      return res.status(200).json(data)
+      const mapped = (data || []).map(mapDbToTrade)
+      return res.status(200).json(mapped)
     }
 
     if (req.method === 'POST') {

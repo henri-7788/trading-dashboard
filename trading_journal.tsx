@@ -30,6 +30,31 @@ export default function TradingJournal() {
     return `${day}.${month}.${year} ${hours}:${minutes}`
   }
 
+  const normalizeTrade = (t) => ({
+    ...t,
+    // normalize numeric fields
+    entryPrice: Number(t.entryPrice) || 0,
+    stopLoss: Number(t.stopLoss) || 0,
+    takeProfit: Number(t.takeProfit) || 0,
+    position: Number(t.position) || 0,
+    exitPrice: t.exitPrice == null ? null : Number(t.exitPrice),
+    // normalize dates into datetime-local format for inputs
+    datum: t.datum ? toDateTimeLocal(new Date(t.datum)) : toDateTimeLocal(new Date()),
+    exitDate: t.exitDate ? toDateTimeLocal(new Date(t.exitDate)) : null,
+    partialExits: Array.isArray(t.partialExits) ? t.partialExits.map(e => ({
+      id: e.id,
+      percentage: Number(e.percentage) || 0,
+      price: Number(e.price) || 0,
+      date: e.date ? toDateTimeLocal(new Date(e.date)) : toDateTimeLocal(new Date())
+    })) : [],
+    addOns: Array.isArray(t.addOns) ? t.addOns.map(a => ({
+      id: a.id,
+      date: a.date ? toDateTimeLocal(new Date(a.date)) : toDateTimeLocal(new Date()),
+      amount: Number(a.amount) || 0,
+      entryPrice: Number(a.entryPrice) || 0
+    })) : [],
+  })
+
   useEffect(() => {
     (async () => {
       const res = await fetch('/api/trades')
@@ -38,14 +63,7 @@ export default function TradingJournal() {
         return
       }
       const data = await res.json()
-      const normalize = (t) => ({
-        ...t,
-        partialExits: Array.isArray(t.partialExits) ? t.partialExits : [],
-        addOns: Array.isArray(t.addOns) ? t.addOns : [],
-        datum: t.datum || toDateTimeLocal(new Date()),
-        exitDate: t.exitDate || null,
-      })
-      setTrades(Array.isArray(data) ? data.map(normalize) : [])
+      setTrades(Array.isArray(data) ? data.map(normalizeTrade) : [])
       setLoading(false)
     })()
   }, [])
@@ -69,7 +87,16 @@ export default function TradingJournal() {
       status: 'open'
     }
     setTrades([...trades, newTrade]);
-    fetch('/api/trades', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newTrade) })
+    ;(async () => {
+      try {
+        const res = await fetch('/api/trades', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newTrade) })
+        if (!res.ok) return
+        const saved = await res.json()
+        setTrades(prev => prev.map(t => t.id === newTrade.id ? normalizeTrade(saved) : t))
+      } catch (err) {
+        console.error('addTrade failed', err)
+      }
+    })()
   };
 
   const deleteTrade = (id) => {
@@ -105,8 +132,18 @@ export default function TradingJournal() {
   const saveTrade = async (tradeId) => {
     const trade = trades.find(t => t.id === tradeId);
     if (!trade) return;
-    await fetch('/api/trades', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(trade) });
-    setSavedTimestamps(prev => ({ ...prev, [tradeId]: Date.now() }));
+    try {
+      const res = await fetch('/api/trades', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(trade) });
+      if (!res.ok) {
+        console.error('save failed', await res.text())
+        return
+      }
+      const saved = await res.json()
+      setTrades(prev => prev.map(t => t.id === tradeId ? normalizeTrade(saved) : t))
+      setSavedTimestamps(prev => ({ ...prev, [tradeId]: Date.now() }));
+    } catch (err) {
+      console.error('saveTrade error', err)
+    }
   };
 
   const updatePartialExit = (tradeId, exitId, field, value) => {
@@ -278,7 +315,7 @@ export default function TradingJournal() {
             const rrr = getRRR(trade);
 
             return (
-              <div key={trade.id} className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-lg p-6">
+              <div key={trade.id} data-trade-id={trade.id} className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-lg p-6">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center gap-3">
                     {/* simplified: same icon/color for all trades; side indicates long/short */}
