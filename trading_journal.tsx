@@ -1,29 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, TrendingUp, TrendingDown } from 'lucide-react';
 
 export default function TradingJournal() {
-  const [trades, setTrades] = useState([
-    {
-      id: 1,
-      datum: '2025-10-09',
-      coin: 'BTC/USDT',
-      entryPrice: 100000,
-      stopLoss: 90000,
-      takeProfit: 110000,
-      setup: '',
-      kommentar: '',
-      position: 1000, // Position size in USD
-      partialExits: [],
-      exitPrice: null,
-      exitDate: null,
-      status: 'open' // open, closed
-    }
-  ]);
+  const [trades, setTrades] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [compactView, setCompactView] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const res = await fetch('/api/trades')
+      if (res.status === 401) {
+        window.location.href = '/login'
+        return
+      }
+      const data = await res.json()
+      setTrades(data)
+      setLoading(false)
+    })()
+  }, [])
 
   const addTrade = () => {
-    setTrades([...trades, {
+    const newTrade = {
       id: Date.now(),
       datum: new Date().toISOString().split('T')[0],
+      side: 'long',
       coin: '',
       entryPrice: 0,
       stopLoss: 0,
@@ -32,22 +32,29 @@ export default function TradingJournal() {
       kommentar: '',
       position: 0,
       partialExits: [],
+      addOns: [],
       exitPrice: null,
       exitDate: null,
       status: 'open'
-    }]);
+    }
+    setTrades([...trades, newTrade]);
+    fetch('/api/trades', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newTrade) })
   };
 
   const deleteTrade = (id) => {
     setTrades(trades.filter(t => t.id !== id));
+    fetch(`/api/trades?id=${id}`, { method: 'DELETE' })
   };
 
   const updateTrade = (id, field, value) => {
-    setTrades(trades.map(t => t.id === id ? { ...t, [field]: value } : t));
+    const updated = trades.map(t => t.id === id ? { ...t, [field]: value } : t)
+    setTrades(updated)
+    const trade = updated.find(t => t.id === id)
+    fetch('/api/trades', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(trade) })
   };
 
   const addPartialExit = (tradeId) => {
-    setTrades(trades.map(t => {
+    const updated = trades.map(t => {
       if (t.id === tradeId) {
         return {
           ...t,
@@ -60,11 +67,14 @@ export default function TradingJournal() {
         };
       }
       return t;
-    }));
+    })
+    setTrades(updated)
+    const trade = updated.find(t => t.id === tradeId)
+    fetch('/api/trades', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(trade) })
   };
 
   const updatePartialExit = (tradeId, exitId, field, value) => {
-    setTrades(trades.map(t => {
+    const updated = trades.map(t => {
       if (t.id === tradeId) {
         return {
           ...t,
@@ -74,11 +84,14 @@ export default function TradingJournal() {
         };
       }
       return t;
-    }));
+    })
+    setTrades(updated)
+    const trade = updated.find(t => t.id === tradeId)
+    fetch('/api/trades', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(trade) })
   };
 
   const deletePartialExit = (tradeId, exitId) => {
-    setTrades(trades.map(t => {
+    const updated = trades.map(t => {
       if (t.id === tradeId) {
         return {
           ...t,
@@ -86,7 +99,10 @@ export default function TradingJournal() {
         };
       }
       return t;
-    }));
+    })
+    setTrades(updated)
+    const trade = updated.find(t => t.id === tradeId)
+    fetch('/api/trades', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(trade) })
   };
 
   const calculatePNL = (trade) => {
@@ -117,9 +133,9 @@ export default function TradingJournal() {
 
   const calculateDuration = (trade) => {
     if (!trade.exitDate || trade.status === 'open') return '-';
-    const start = new Date(trade.datum);
-    const end = new Date(trade.exitDate);
-    const days = Math.floor((end - start) / (1000 * 60 * 60 * 24));
+  const start = new Date(trade.datum).getTime();
+  const end = new Date(trade.exitDate).getTime();
+  const days = Math.floor((end - start) / (1000 * 60 * 60 * 24));
     return `${days}d`;
   };
 
@@ -131,6 +147,7 @@ export default function TradingJournal() {
   };
 
   const totalPNL = trades.reduce((sum, trade) => sum + calculatePNL(trade), 0);
+  if (loading) return <div className="p-6 text-white">Lade Trades…</div>
   const openTrades = trades.filter(t => t.status === 'open').length;
   const closedTrades = trades.filter(t => t.status === 'closed').length;
   const winningTrades = trades.filter(t => t.status === 'closed' && calculatePNL(t) > 0).length;
@@ -168,17 +185,29 @@ export default function TradingJournal() {
         </div>
 
         {/* Add Trade Button */}
-        <button
-          onClick={addTrade}
-          className="mb-6 flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-        >
-          <Plus size={20} />
-          Neuer Trade
-        </button>
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <div className="flex gap-2">
+            <button
+              onClick={addTrade}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+            >
+              <Plus size={18} />
+              Neuer Trade
+            </button>
+            <button
+              onClick={() => setCompactView(!compactView)}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+            >
+              {compactView ? 'Kartenansicht' : 'Kompakte Ansicht'}
+            </button>
+          </div>
+          <div className="text-slate-400">Trades: {trades.length}</div>
+        </div>
 
         {/* Trades */}
-        <div className="space-y-6">
-          {trades.map((trade) => {
+        {!compactView && (
+          <div className="space-y-6">
+            {trades.map((trade) => {
             const pnl = calculatePNL(trade);
             const duration = calculateDuration(trade);
             const rrr = getRRR(trade);
@@ -187,20 +216,17 @@ export default function TradingJournal() {
               <div key={trade.id} className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-lg p-6">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center gap-3">
-                    {trade.status === 'open' ? (
-                      <TrendingUp className="text-blue-400" size={24} />
+                    {/* simplified: same icon/color for all trades; side indicates long/short */}
+                    {trade.side === 'short' ? (
+                      <TrendingDown size={24} />
                     ) : (
-                      <TrendingDown className={pnl >= 0 ? 'text-green-400' : 'text-red-400'} size={24} />
+                      <TrendingUp size={24} />
                     )}
                     <div>
                       <h3 className="text-xl font-semibold text-white">
                         {trade.coin || 'Neuer Trade'}
                       </h3>
-                      <span className={`text-sm px-2 py-1 rounded ${
-                        trade.status === 'open' 
-                          ? 'bg-blue-500/20 text-blue-400' 
-                          : 'bg-slate-700 text-slate-300'
-                      }`}>
+                      <span className={`text-sm px-2 py-1 rounded bg-slate-700 text-slate-300`}>
                         {trade.status === 'open' ? 'Offen' : 'Geschlossen'}
                       </span>
                     </div>
@@ -233,6 +259,17 @@ export default function TradingJournal() {
                       className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded text-white focus:border-blue-500 focus:outline-none"
                       placeholder="BTC/USDT"
                     />
+                  </div>
+                  <div>
+                    <label className="text-slate-400 text-sm block mb-1">Side</label>
+                    <select
+                      value={trade.side || 'long'}
+                      onChange={(e) => updateTrade(trade.id, 'side', e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded text-white focus:border-blue-500 focus:outline-none"
+                    >
+                      <option value="long">Long</option>
+                      <option value="short">Short</option>
+                    </select>
                   </div>
                   <div>
                     <label className="text-slate-400 text-sm block mb-1">Entry Price</label>
@@ -313,6 +350,67 @@ export default function TradingJournal() {
                           />
                           <button
                             onClick={() => deletePartialExit(trade.id, exit.id)}
+                            className="text-red-400 hover:text-red-300"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Nachkäufe (addOns) */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-slate-300 font-medium">Nachkäufe</label>
+                    <button
+                      onClick={() => {
+                        const updated = trades.map(t => t.id === trade.id ? { ...t, addOns: [...(t.addOns||[]), { id: Date.now(), date: new Date().toISOString().split('T')[0], amount: 0 }] } : t)
+                        setTrades(updated)
+                        const updatedTrade = updated.find(t => t.id === trade.id)
+                        fetch('/api/trades', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedTrade) })
+                      }}
+                      className="text-sm px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded transition-colors"
+                    >
+                      + Nachkauf
+                    </button>
+                  </div>
+                  {(trade.addOns||[]).length > 0 && (
+                    <div className="space-y-2">
+                      {(trade.addOns||[]).map((add) => (
+                        <div key={add.id} className="flex gap-2 items-center bg-slate-900/50 p-3 rounded">
+                          <input
+                            type="date"
+                            value={add.date}
+                            onChange={(e) => {
+                              const updated = trades.map(t => t.id === trade.id ? { ...t, addOns: t.addOns.map(a => a.id === add.id ? { ...a, date: e.target.value } : a) } : t)
+                              setTrades(updated)
+                              const updatedTrade = updated.find(t => t.id === trade.id)
+                              fetch('/api/trades', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedTrade) })
+                            }}
+                            className="flex-1 px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white text-sm focus:border-blue-500 focus:outline-none"
+                          />
+                          <input
+                            type="number"
+                            value={add.amount || ''}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value) || 0
+                              const updated = trades.map(t => t.id === trade.id ? { ...t, addOns: t.addOns.map(a => a.id === add.id ? { ...a, amount: val } : a) } : t)
+                              setTrades(updated)
+                              const updatedTrade = updated.find(t => t.id === trade.id)
+                              fetch('/api/trades', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedTrade) })
+                            }}
+                            className="w-36 px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white text-sm focus:border-blue-500 focus:outline-none"
+                            placeholder="Amount"
+                          />
+                          <button
+                            onClick={() => {
+                              const updated = trades.map(t => t.id === trade.id ? { ...t, addOns: t.addOns.filter(a => a.id !== add.id) } : t)
+                              setTrades(updated)
+                              const updatedTrade = updated.find(t => t.id === trade.id)
+                              fetch('/api/trades', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedTrade) })
+                            }}
                             className="text-red-400 hover:text-red-300"
                           >
                             <Trash2 size={16} />
@@ -405,7 +503,55 @@ export default function TradingJournal() {
               </div>
             );
           })}
-        </div>
+          </div>
+        )}
+
+        {compactView && (
+          <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+            <table className="w-full text-sm text-left text-white">
+              <thead>
+                <tr className="text-slate-400">
+                  <th className="py-2 px-3">Datum</th>
+                  <th className="py-2 px-3">Coin</th>
+                  <th className="py-2 px-3">Side</th>
+                  <th className="py-2 px-3">Entry</th>
+                  <th className="py-2 px-3">SL</th>
+                  <th className="py-2 px-3">TP</th>
+                  <th className="py-2 px-3">Position</th>
+                  <th className="py-2 px-3">PNL</th>
+                  <th className="py-2 px-3">Status</th>
+                  <th className="py-2 px-3">Aktionen</th>
+                </tr>
+              </thead>
+              <tbody>
+                {trades.map(trade => {
+                  const pnl = calculatePNL(trade)
+                  return (
+                    <tr key={trade.id} className="border-t border-slate-700">
+                      <td className="py-2 px-3">{trade.datum}</td>
+                      <td className="py-2 px-3">{trade.coin}</td>
+                      <td className="py-2 px-3">{trade.side || 'long'}</td>
+                      <td className="py-2 px-3">{trade.entryPrice}</td>
+                      <td className="py-2 px-3">{trade.stopLoss}</td>
+                      <td className="py-2 px-3">{trade.takeProfit}</td>
+                      <td className="py-2 px-3">{trade.position}</td>
+                      <td className={`py-2 px-3 ${pnl>=0 ? 'text-green-400' : 'text-red-400'}`}>${pnl.toFixed(2)}</td>
+                      <td className="py-2 px-3">{trade.status}</td>
+                      <td className="py-2 px-3">
+                        <button onClick={() => {
+                          // focus the trade by scrolling to its card if visible
+                          const el = document.querySelector(`[data-trade-id="${trade.id}"]`)
+                          if (el) (el as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' })
+                        }} className="text-sm px-2 py-1 bg-slate-700 rounded">Anzeigen</button>
+                        <button onClick={() => deleteTrade(trade.id)} className="ml-2 text-sm px-2 py-1 bg-red-600 rounded">Löschen</button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {trades.length === 0 && (
           <div className="text-center py-12 text-slate-400">

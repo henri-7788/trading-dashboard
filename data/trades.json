@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1760031697858,
+    "datum": "2025-10-09",
+    "side": "long",
+    "coin": "BTC/USDT",
+    "entryPrice": 100,
+    "stopLoss": 90,
+    "takeProfit": 120,
+    "setup": "",
+    "kommentar": "",
+    "position": 5,
+    "partialExits": [
+      {
+        "id": 1760031717114,
+        "percentage": 50,
+        "price": 110,
+        "date": "2025-10-09"
+      }
+    ],
+    "addOns": [],
+    "exitPrice": null,
+    "exitDate": null,
+    "status": "open"
+  }
+]
