@@ -5,6 +5,8 @@ export default function TradingJournal() {
   const [trades, setTrades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [compactView, setCompactView] = useState(false);
+  const [pnlRange, setPnlRange] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('pnlRange') || 'all' : 'all')
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   const toDateTimeLocal = (d = new Date()) => {
     const pad = (n) => String(n).padStart(2, '0')
@@ -248,7 +250,25 @@ export default function TradingJournal() {
     return (reward / risk).toFixed(2);
   };
 
+  const getStatusClass = (trade) => {
+    const pnl = calculatePNL(trade)
+    if (pnl < 0) return 'bg-red-600 text-white'
+    if (trade.status === 'closed') return 'bg-green-600 text-white'
+    return 'bg-amber-500 text-black'
+  }
+
   const totalPNL = trades.reduce((sum, trade) => sum + calculatePNL(trade), 0);
+  const filterTradeByRange = (trade, range) => {
+    if (range === 'all') return true
+    const now = Date.now()
+    const timestamp = trade.exitDate ? new Date(trade.exitDate).getTime() : new Date(trade.datum).getTime()
+    if (isNaN(timestamp)) return false
+    if (range === '30d') return (now - timestamp) <= 1000 * 60 * 60 * 24 * 30
+    if (range === '7d') return (now - timestamp) <= 1000 * 60 * 60 * 24 * 7
+    if (range === '24h') return (now - timestamp) <= 1000 * 60 * 60 * 24
+    return true
+  }
+  const totalPNLForRange = trades.filter(t => filterTradeByRange(t, pnlRange)).reduce((sum, trade) => sum + calculatePNL(trade), 0);
   if (loading) return <div className="p-6 text-white">Lade Trades…</div>
   const openTrades = trades.filter(t => t.status === 'open').length;
   const closedTrades = trades.filter(t => t.status === 'closed').length;
@@ -260,16 +280,36 @@ export default function TradingJournal() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Trading Journal</h1>
-          <p className="text-slate-400">Verwalte deine Trades mit Teilprofiten</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold text-white mb-2">Trading Journal</h1>
+              <p className="text-slate-400">Verwalte deine Trades mit Teilprofiten</p>
+            </div>
+            <div>
+              <button onClick={() => setSettingsOpen(!settingsOpen)} className="text-slate-300 bg-slate-700 px-3 py-2 rounded hover:bg-slate-600">⚙️</button>
+            </div>
+          </div>
+          {settingsOpen && (
+            <div className="mt-3 p-3 bg-slate-800 border border-slate-700 rounded w-64 text-white">
+              <div className="text-sm mb-2 font-semibold">PNL Zeitraum</div>
+              <div className="flex flex-col gap-2">
+                {[[ 'all', 'All-Time' ], ['30d','Letzte 30 Tage'], ['7d','Letzte 7 Tage'], ['24h','Letzte 24 Stunden']].map(([key,label]) => (
+                  <label key={key} className="flex items-center gap-2">
+                    <input type="radio" name="pnlRange" checked={pnlRange===key} onChange={() => { setPnlRange(key); localStorage.setItem('pnlRange', key) }} />
+                    <span>{label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-lg p-4">
-            <div className="text-slate-400 text-sm mb-1">Gesamt PNL</div>
-            <div className={`text-2xl font-bold ${totalPNL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              ${totalPNL.toFixed(2)}
+            <div className="text-slate-400 text-sm mb-1">Gesamt PNL ({pnlRange === 'all' ? 'All-Time' : pnlRange === '30d' ? '30d' : pnlRange === '7d' ? '7d' : '24h'})</div>
+            <div className={`text-2xl font-bold ${totalPNLForRange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              ${totalPNLForRange.toFixed(2)}
             </div>
           </div>
           <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-lg p-4">
@@ -328,7 +368,7 @@ export default function TradingJournal() {
                       <h3 className="text-xl font-semibold text-white">
                         {trade.coin || 'Neuer Trade'}
                       </h3>
-                      <span className={`text-sm px-2 py-1 rounded bg-slate-700 text-slate-300`}>
+                      <span className={`text-sm px-2 py-1 rounded ${getStatusClass(trade)}`}>
                         {trade.status === 'open' ? 'Offen' : 'Geschlossen'}
                       </span>
                     </div>
@@ -649,7 +689,7 @@ export default function TradingJournal() {
                       <td className="py-2 px-3">{trade.takeProfit}</td>
                       <td className="py-2 px-3">{trade.position}</td>
                       <td className={`py-2 px-3 ${pnl>=0 ? 'text-green-400' : 'text-red-400'}`}>${pnl.toFixed(2)}</td>
-                      <td className="py-2 px-3">{trade.status}</td>
+                      <td className="py-2 px-3"><span className={`text-sm px-2 py-1 rounded ${getStatusClass(trade)}`}>{trade.status}</span></td>
                       <td className="py-2 px-3">
                         <button onClick={() => {
                           // focus the trade by scrolling to its card if visible
