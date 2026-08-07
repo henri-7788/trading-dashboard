@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 
-const PASSWORD = 'Homburg-1'
+const PASSWORD = process.env.APP_PASSWORD
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'POST') {

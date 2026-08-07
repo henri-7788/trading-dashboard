@@ -1,6 +1,5 @@
-import dynamic from 'next/dynamic'
-import TradingJournal from '../trading_journal'
+import Dashboard from '../components/Dashboard'
 
 export default function HomePage() {
-  return <TradingJournal />
+  return <Dashboard />
 }
