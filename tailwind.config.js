@@ -6,19 +6,21 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        board: {
+        ink: {
           950: '#08090b',
-          900: '#0d0f12',
-          850: '#121419',
-          800: '#181b21',
-          700: '#22262e',
-          600: '#2e333d',
-          500: '#454b57',
-          400: '#6b7280'
+          900: '#0c0d10',
+          850: '#111318',
+          800: '#16181d',
+          700: '#1e2127',
+          600: '#282c33',
+          500: '#5b6270',
+          400: '#828a99',
+          300: '#a8afb9',
+          100: '#e7e9ed'
         },
-        flap: {
-          amber: '#e8b95a',
-          bone: '#e9e4d8'
+        signal: {
+          DEFAULT: '#4f8cff',
+          dim: '#2f5bb0'
         },
         up: {
           DEFAULT: '#3fb37f',
@@ -30,14 +32,8 @@ module.exports = {
         }
       },
       fontFamily: {
-        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'Liberation Mono', 'monospace']
-      },
-      boxShadow: {
-        flap: 'inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -6px 10px rgba(0,0,0,0.35), 0 1px 0 rgba(0,0,0,0.6)'
-      },
-      backgroundImage: {
-        grain: "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.035) 1px, transparent 0)"
+        sans: ['var(--font-ui)', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-data)', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace']
       }
     }
   },

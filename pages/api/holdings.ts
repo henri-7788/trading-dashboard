@@ -14,15 +14,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const equity = await computeEquity()
-    return res.status(200).json({
-      accountValue: equity.totalEquity,
-      withdrawable: equity.cashWithdrawable,
-      cashTotal: equity.cashTotal,
-      holdingsValue: equity.holdingsValue,
-      connections: equity.connections
-    })
+    return res.status(200).json({ holdings: equity.holdings })
   } catch (err: any) {
-    console.error('account fetch failed', err)
+    console.error('holdings fetch failed', err)
     return res.status(500).json({ error: err.message || String(err) })
   }
 }

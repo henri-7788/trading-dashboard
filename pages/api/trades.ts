@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { Query } from 'node-appwrite'
-import { databases, DATABASE_ID, TRADES_COLLECTION_ID, SYNC_STATE_COLLECTION_ID } from '../../lib/appwriteServer'
+import { databases, DATABASE_ID, TRADES_COLLECTION_ID, SYNC_STATE_COLLECTION_ID, CONNECTIONS_COLLECTION_ID } from '../../lib/appwriteServer'
 import { fetchMids } from '../../lib/hyperliquid'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -15,7 +15,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const wallet = process.env.HYPERLIQUID_WALLET_ADDRESS
     const pages: any[] = []
     let cursor: string | undefined
 
@@ -32,21 +31,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       cursor = result.documents[result.documents.length - 1].$id
     }
 
-    let lastSyncedAt: string | null = null
-    if (wallet) {
-      try {
-        const state = await databases.listDocuments({
-          databaseId: DATABASE_ID,
-          collectionId: SYNC_STATE_COLLECTION_ID,
-          queries: [Query.equal('wallet', wallet), Query.limit(1)]
-        })
-        lastSyncedAt = state.documents[0]?.lastSyncedAt || null
-      } catch {
-        lastSyncedAt = null
-      }
-    }
+    const [connectionsResult, syncStatesResult] = await Promise.all([
+      databases.listDocuments({ databaseId: DATABASE_ID, collectionId: CONNECTIONS_COLLECTION_ID, queries: [Query.limit(100)] }),
+      databases.listDocuments({ databaseId: DATABASE_ID, collectionId: SYNC_STATE_COLLECTION_ID, queries: [Query.limit(100)] })
+    ])
+    const labelById = new Map(connectionsResult.documents.map((c) => [c.$id, c.label as string]))
 
-    const trades = pages.map(mapDoc)
+    const lastSyncedAt =
+      syncStatesResult.documents
+        .map((s) => s.lastSyncedAt as string | null)
+        .filter((d): d is string => Boolean(d))
+        .sort()
+        .pop() || null
+
+    const trades = pages.map((d) => mapDoc(d, labelById))
 
     const openCoins = new Set(trades.filter((t) => t.status === 'open').map((t) => t.coin))
     if (openCoins.size > 0) {
@@ -65,14 +63,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    return res.status(200).json({ trades, lastSyncedAt, wallet: wallet || null })
+    return res.status(200).json({ trades, lastSyncedAt })
   } catch (err: any) {
     console.error('trades fetch failed', err)
     return res.status(500).json({ error: err.message || String(err) })
   }
 }
 
-function mapDoc(d: any) {
+function mapDoc(d: any, labelById: Map<string, string>) {
   return {
     id: d.$id,
     externalId: d.externalId,
@@ -88,6 +86,8 @@ function mapDoc(d: any) {
     fee: d.fee,
     fillsCount: d.fillsCount,
     openedAt: d.openedAt,
-    closedAt: d.closedAt
+    closedAt: d.closedAt,
+    connectionId: d.connectionId || null,
+    connectionLabel: d.connectionId ? labelById.get(d.connectionId) || d.connectionId : null
   }
 }

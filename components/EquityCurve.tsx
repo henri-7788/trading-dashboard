@@ -6,7 +6,7 @@ interface Point {
 export default function EquityCurve({ points }: { points: Point[] }) {
   if (points.length < 2) {
     return (
-      <div className="flex h-40 items-center justify-center text-sm text-board-400 font-mono">
+      <div className="flex h-40 items-center justify-center text-sm text-ink-400 font-mono">
         Noch nicht genug geschlossene Trades für eine Kurve
       </div>
     )
@@ -32,9 +32,9 @@ export default function EquityCurve({ points }: { points: Point[] }) {
 
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-40 md:h-52" preserveAspectRatio="none">
-      <line x1={pad} y1={zeroY} x2={w - pad} y2={zeroY} stroke="#22262e" strokeWidth={1} strokeDasharray="4 4" />
-      <path d={areaPath} fill={stroke} fillOpacity={0.08} stroke="none" />
-      <path d={linePath} fill="none" stroke={stroke} strokeWidth={2} />
+      <line x1={pad} y1={zeroY} x2={w - pad} y2={zeroY} stroke="#1e2127" strokeWidth={1} strokeDasharray="4 4" />
+      <path d={areaPath} fill={stroke} fillOpacity={0.1} stroke="none" />
+      <path d={linePath} fill="none" stroke={stroke} strokeWidth={1.5} />
     </svg>
   )
 }
