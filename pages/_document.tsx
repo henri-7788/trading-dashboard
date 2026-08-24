@@ -8,7 +8,7 @@ export default function Document() {
         <meta name="description" content="Portfolio- und Trading-Übersicht über alle verbundenen Börsen." />
 
         <link rel="manifest" href="/manifest.webmanifest" />
-        <meta name="theme-color" content="#08090b" />
+        <meta name="theme-color" content="#050609" />
         <meta name="color-scheme" content="dark" />
 
         <link rel="icon" href="/favicon.ico" sizes="any" />

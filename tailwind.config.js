@@ -6,34 +6,44 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Deep neutral base the ambient background gradient sits on and glass panels blur against.
         ink: {
-          950: '#08090b',
-          900: '#0c0d10',
-          850: '#111318',
-          800: '#16181d',
-          700: '#1e2127',
-          600: '#282c33',
-          500: '#5b6270',
-          400: '#828a99',
-          300: '#a8afb9',
-          100: '#e7e9ed'
+          950: '#050609',
+          900: '#0a0c11',
+          850: '#0f121a',
+          800: '#151a23',
+          700: '#1d2330',
+          600: '#2a3242',
+          500: '#5c6577',
+          400: '#8891a3',
+          300: '#aeb6c4',
+          100: '#f2f4f8'
         },
+        // Apple system-palette accents — chosen to read as saturated color through frosted glass.
         signal: {
-          DEFAULT: '#4f8cff',
-          dim: '#2f5bb0'
+          DEFAULT: '#0a84ff',
+          dim: '#0060df'
         },
         up: {
-          DEFAULT: '#3fb37f',
-          dim: '#1f7a54'
+          DEFAULT: '#32d74b',
+          dim: '#1fa834'
         },
         down: {
-          DEFAULT: '#d9564b',
-          dim: '#8f3a33'
+          DEFAULT: '#ff453a',
+          dim: '#d92e24'
+        },
+        amber: {
+          DEFAULT: '#ff9f0a',
+          dim: '#c97800'
         }
       },
       fontFamily: {
-        sans: ['var(--font-ui)', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        mono: ['var(--font-data)', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace']
+        sans: ['var(--font-ui)', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'ui-sans-serif', 'system-ui', 'sans-serif']
+      },
+      borderRadius: {
+        '2xl': '20px',
+        '3xl': '28px',
+        '4xl': '32px'
       }
     }
   },

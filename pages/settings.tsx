@@ -142,31 +142,28 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-ink-950 flex items-center justify-center">
-        <div className="font-mono text-sm text-ink-300 tabular animate-pulse">Lade Einstellungen…</div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-sm text-ink-300 tabular animate-pulse">Lade Einstellungen…</div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-ink-950 pb-16">
+    <div className="min-h-screen pb-16">
       <div className="max-w-3xl mx-auto px-4 md:px-6 pt-8">
-        <header className="border border-ink-700 rounded-md px-5 py-4 mb-6 flex items-center justify-between gap-4">
+        <header className="glass-panel px-5 py-4 mb-6 flex items-center justify-between gap-4">
           <div>
-            <h1 className="font-mono text-sm tracking-[0.15em] text-ink-100 uppercase">Einstellungen</h1>
-            <p className="text-xs text-ink-400 font-mono mt-1">Verbindungen &amp; manuelle Positionen</p>
+            <h1 className="text-base font-semibold text-ink-100">Einstellungen</h1>
+            <p className="text-xs text-ink-400 mt-1">Verbindungen &amp; manuelle Positionen</p>
           </div>
-          <Link
-            href="/"
-            className="font-mono text-xs uppercase tracking-widest px-4 py-2 rounded-sm border border-ink-600 bg-ink-900 text-ink-100 hover:bg-ink-800 hover:border-signal/40 transition-colors"
-          >
+          <Link href="/" className="glass-pill px-4 py-2 text-xs font-medium">
             ← Dashboard
           </Link>
         </header>
 
-        {error && <div className="mb-6 rounded-sm border border-down/40 bg-down/10 px-4 py-3 text-sm font-mono text-down">{error}</div>}
+        {error && <div className="glass-panel-tight mb-6 px-4 py-3 text-sm text-down border-down/25">{error}</div>}
         {notice && (
-          <div className="mb-6 rounded-sm border border-up/40 bg-up/10 px-4 py-3 text-sm font-mono text-up flex items-center justify-between">
+          <div className="glass-panel-tight mb-6 px-4 py-3 text-sm text-up border-up/25 flex items-center justify-between">
             {notice}
             <button onClick={() => setNotice(null)} className="text-up/70 hover:text-up ml-4">
               ✕
@@ -177,32 +174,32 @@ export default function SettingsPage() {
         {/* Connections */}
         <section className="mb-8">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-mono text-xs uppercase tracking-widest text-ink-400">Verbindungen</h2>
+            <h2 className="text-xs uppercase tracking-widest text-ink-400">Verbindungen</h2>
           </div>
 
           <div className="flex flex-col gap-3 mb-3">
             {connections.length === 0 && (
-              <div className="border border-ink-700 rounded-md px-4 py-6 text-center text-ink-400 font-mono text-sm">
+              <div className="glass-panel px-4 py-6 text-center text-ink-400 text-sm">
                 Noch keine Verbindung. Füge Hyperliquid oder eine Börse hinzu, um Trades und Bestände zu synchronisieren.
               </div>
             )}
             {connections.map((c) => (
-              <div key={c.id} className="border border-ink-700 rounded-md px-4 py-3 flex items-center justify-between gap-4">
+              <div key={c.id} className="glass-panel px-4 py-3 flex items-center justify-between gap-4">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] uppercase tracking-widest px-1.5 py-0.5 rounded-sm bg-ink-800 text-ink-400 font-mono">
+                    <span className="glass-pill px-2 py-0.5 text-[10px] uppercase tracking-widest">
                       {c.type === 'hyperliquid' ? 'Hyperliquid' : c.exchangeId}
                     </span>
-                    <span className="font-mono text-sm text-ink-100 truncate">{c.label}</span>
+                    <span className="text-sm text-ink-100 truncate">{c.label}</span>
                   </div>
-                  <p className="text-xs text-ink-400 font-mono mt-1 truncate">
+                  <p className="text-xs text-ink-400 mt-1 truncate">
                     {c.type === 'hyperliquid' ? c.walletAddress : c.apiKeyPreview ? `API-Key ${c.apiKeyPreview}` : 'kein API-Key'}
                   </p>
                 </div>
                 <button
                   onClick={() => removeConnection(c.id, c.label)}
                   disabled={busy}
-                  className="shrink-0 font-mono text-xs uppercase tracking-widest px-3 py-1.5 rounded-sm border border-ink-600 text-down hover:bg-down/10 hover:border-down/40 transition-colors disabled:opacity-50"
+                  className="glass-pill glass-pill-down shrink-0 px-3 py-1.5 text-xs font-medium disabled:opacity-50"
                 >
                   Entfernen
                 </button>
@@ -213,13 +210,13 @@ export default function SettingsPage() {
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => setShowAddConnection(showAddConnection === 'hyperliquid' ? null : 'hyperliquid')}
-              className="font-mono text-xs uppercase tracking-widest px-4 py-2 rounded-sm border border-ink-600 bg-ink-900 text-signal hover:bg-ink-800 hover:border-signal/50 transition-colors"
+              className="glass-pill glass-pill-signal px-4 py-2 text-xs font-medium"
             >
               + Hyperliquid Wallet
             </button>
             <button
               onClick={() => setShowAddConnection(showAddConnection === 'ccxt' ? null : 'ccxt')}
-              className="font-mono text-xs uppercase tracking-widest px-4 py-2 rounded-sm border border-ink-600 bg-ink-900 text-signal hover:bg-ink-800 hover:border-signal/50 transition-colors"
+              className="glass-pill glass-pill-signal px-4 py-2 text-xs font-medium"
             >
               + Börse (API-Key)
             </button>
@@ -253,17 +250,17 @@ export default function SettingsPage() {
         {/* Manual positions */}
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-mono text-xs uppercase tracking-widest text-ink-400">Manuelle Positionen (Aktien, ETFs, …)</h2>
+            <h2 className="text-xs uppercase tracking-widest text-ink-400">Manuelle Positionen (Aktien, ETFs, …)</h2>
           </div>
 
-          <div className="border border-ink-700 rounded-md overflow-hidden mb-3">
+          <div className="glass-panel overflow-hidden mb-3">
             {transactions.filter((t) => t.editable).length === 0 ? (
-              <div className="py-10 text-center text-ink-400 font-mono text-sm">Noch keine manuellen Käufe/Verkäufe erfasst.</div>
+              <div className="py-10 text-center text-ink-400 text-sm">Noch keine manuellen Käufe/Verkäufe erfasst.</div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm font-mono">
+                <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-[10px] uppercase tracking-widest text-ink-400 border-b border-ink-700">
+                    <tr className="text-left text-[10px] uppercase tracking-widest text-ink-400 border-b border-white/10">
                       <th className="py-2.5 px-4">Symbol</th>
                       <th className="py-2.5 px-4">Typ</th>
                       <th className="py-2.5 px-4">Seite</th>
@@ -277,7 +274,7 @@ export default function SettingsPage() {
                     {transactions
                       .filter((t) => t.editable)
                       .map((t) => (
-                        <tr key={t.id} className="border-b border-ink-800 last:border-0">
+                        <tr key={t.id} className="border-b border-white/[0.06] last:border-0">
                           <td className="py-2.5 px-4 text-ink-100 font-medium">{t.symbol}</td>
                           <td className="py-2.5 px-4 text-ink-400">{ASSET_CLASS_LABEL[t.assetClass]}</td>
                           <td className="py-2.5 px-4">
@@ -304,11 +301,11 @@ export default function SettingsPage() {
           <div className="flex gap-2 flex-wrap items-center">
             <button
               onClick={() => setShowAddPosition((v) => !v)}
-              className="font-mono text-xs uppercase tracking-widest px-4 py-2 rounded-sm border border-ink-600 bg-ink-900 text-signal hover:bg-ink-800 hover:border-signal/50 transition-colors"
+              className="glass-pill glass-pill-signal px-4 py-2 text-xs font-medium"
             >
               + Position erfassen
             </button>
-            <label className="font-mono text-xs uppercase tracking-widest px-4 py-2 rounded-sm border border-ink-600 bg-ink-900 text-signal hover:bg-ink-800 hover:border-signal/50 transition-colors cursor-pointer">
+            <label className="glass-pill glass-pill-signal px-4 py-2 text-xs font-medium cursor-pointer">
               {importing ? 'Importiere…' : 'CSV importieren (TradeRepublic)'}
               <input
                 type="file"
@@ -325,7 +322,7 @@ export default function SettingsPage() {
           </div>
 
           {importSummary && (
-            <div className="border border-ink-700 rounded-md p-4 mt-3 text-sm font-mono">
+            <div className="glass-panel p-4 mt-3 text-sm">
               <div className="text-ink-100 mb-2">
                 {importSummary.totalRows} Zeilen gelesen · <span className="text-up">{importSummary.created} neu</span>
                 {importSummary.updated > 0 && <>, {importSummary.updated} aktualisiert</>}
@@ -370,7 +367,7 @@ export default function SettingsPage() {
 
 function FormShell({ children, onSubmit }: { children: React.ReactNode; onSubmit: (e: FormEvent) => void }) {
   return (
-    <form onSubmit={onSubmit} className="border border-ink-700 rounded-md p-4 mt-3 flex flex-col gap-3">
+    <form onSubmit={onSubmit} className="glass-panel p-4 mt-3 flex flex-col gap-3">
       {children}
     </form>
   )
@@ -379,26 +376,21 @@ function FormShell({ children, onSubmit }: { children: React.ReactNode; onSubmit
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="text-[10px] uppercase tracking-widest text-ink-400 font-mono">{label}</span>
+      <span className="text-[10px] uppercase tracking-widest text-ink-400">{label}</span>
       {children}
     </label>
   )
 }
 
-const inputClass =
-  'w-full px-3 py-2 bg-ink-900 border border-ink-600 rounded-sm text-ink-100 font-mono text-sm focus:outline-none focus:border-signal/60'
+const inputClass = 'glass-input text-sm'
 
 function FormActions({ onCancel, submitLabel, busy }: { onCancel: () => void; submitLabel: string; busy: boolean }) {
   return (
     <div className="flex gap-2 justify-end pt-1">
-      <button type="button" onClick={onCancel} className="font-mono text-xs uppercase tracking-widest px-4 py-2 rounded-sm border border-ink-600 text-ink-400 hover:text-ink-100 transition-colors">
+      <button type="button" onClick={onCancel} className="glass-pill px-4 py-2 text-xs font-medium text-ink-400 hover:text-ink-100">
         Abbrechen
       </button>
-      <button
-        type="submit"
-        disabled={busy}
-        className="font-mono text-xs uppercase tracking-widest px-4 py-2 rounded-sm border border-signal/40 bg-signal/10 text-signal hover:bg-signal/20 transition-colors disabled:opacity-50"
-      >
+      <button type="submit" disabled={busy} className="glass-pill glass-pill-signal px-4 py-2 text-xs font-medium disabled:opacity-50">
         {busy ? 'Speichern…' : submitLabel}
       </button>
     </div>
@@ -510,7 +502,7 @@ function ExchangeForm({
       <Field label="Trading-Paare für Transaktionshistorie (optional, kommagetrennt, z. B. BTC/USDT,ETH/USDT)">
         <input className={inputClass} placeholder="BTC/USDT,ETH/USDT" value={symbols} onChange={(e) => setSymbols(e.target.value)} />
       </Field>
-      <p className="text-xs text-ink-400 font-mono leading-relaxed">
+      <p className="text-xs text-ink-400 leading-relaxed">
         API-Key und Secret werden verschlüsselt gespeichert. Nutze einen Key mit ausschließlich Lese-Rechten (kein Trading/Withdraw).
       </p>
       <FormActions onCancel={onCancel} submitLabel="Verbindung hinzufügen" busy={busy} />
@@ -568,7 +560,7 @@ function TickerAutocomplete({
         required
       />
       {open && suggestions.length > 0 && (
-        <ul className="absolute z-10 top-full left-0 right-0 mt-1 border border-ink-600 rounded-sm bg-ink-900 max-h-56 overflow-y-auto">
+        <ul className="absolute z-10 top-full left-0 right-0 mt-1 glass-panel-tight max-h-56 overflow-y-auto overflow-hidden">
           {suggestions.map((s) => (
             <li key={`${s.symbol}-${s.exchange}`}>
               <button
@@ -577,10 +569,10 @@ function TickerAutocomplete({
                   onPick(s)
                   setOpen(false)
                 }}
-                className="w-full text-left px-3 py-2 hover:bg-ink-800 transition-colors flex items-center justify-between gap-3"
+                className="w-full text-left px-3 py-2 hover:bg-white/[0.06] transition-colors flex items-center justify-between gap-3"
               >
-                <span className="font-mono text-sm text-ink-100">{s.symbol}</span>
-                <span className="font-mono text-xs text-ink-400 truncate">{s.name}</span>
+                <span className="text-sm text-ink-100">{s.symbol}</span>
+                <span className="text-xs text-ink-400 truncate">{s.name}</span>
                 <span className="text-[10px] uppercase tracking-widest text-ink-400 shrink-0">{s.exchange}</span>
               </button>
             </li>

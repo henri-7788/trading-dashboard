@@ -18,21 +18,19 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-ink-950 flex items-center justify-center px-4">
-      <form onSubmit={submit} className="border border-ink-700 rounded-md p-8 w-full max-w-sm">
-        <h1 className="font-mono text-sm tracking-[0.15em] text-ink-100 uppercase mb-6">Trading Dashboard</h1>
-        <label className="block text-xs font-mono uppercase tracking-widest text-ink-400 mb-2">Passwort</label>
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <form onSubmit={submit} className="glass-panel p-8 w-full max-w-sm">
+        <h1 className="text-lg font-semibold text-ink-100 mb-6">Trading Dashboard</h1>
+        <label className="block text-xs uppercase tracking-widest text-ink-400 mb-2">Passwort</label>
         <input
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoFocus
-          className="w-full px-3 py-2.5 bg-ink-900 border border-ink-600 rounded-sm text-ink-100 font-mono focus:outline-none focus:border-signal/60 mb-4"
+          className="glass-input mb-4"
         />
-        {error && <div className="text-down text-xs font-mono mb-4">{error}</div>}
-        <button className="w-full font-mono text-xs uppercase tracking-widest py-2.5 rounded-sm border border-ink-600 bg-ink-900 text-signal hover:bg-ink-800 hover:border-signal/50 transition-colors">
-          Einloggen
-        </button>
+        {error && <div className="text-down text-sm mb-4">{error}</div>}
+        <button className="glass-pill glass-pill-signal w-full py-2.5 text-sm font-medium">Einloggen</button>
       </form>
     </div>
   )

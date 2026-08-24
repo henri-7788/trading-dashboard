@@ -37,15 +37,15 @@ Multi-source by design: Hyperliquid perps/spot and any ccxt-supported crypto exc
 
 ## Brand Commitments
 
-No naming/logo constraints — plain "Trading Dashboard" is fine. Visual register is a standing preference: a professional trading-terminal look in the vein of dYdX, Hyperliquid's own app, and Bloomberg Terminal — dense, flat, monospace-heavy, neutral-dark. An earlier split-flap "departures board" identity (flap tiles, rivets, amber/bone palette) was explicitly rejected as a gimmick and retired; see DESIGN.md.
+No naming/logo constraints — plain "Trading Dashboard" is fine. Visual register is a standing preference: **Liquid Glass** — frosted, translucent glass panels over a drifting ambient color field, in the register of Apple's visionOS/iOS material language. This explicitly replaces the earlier dense, flat, monospace-heavy trading-terminal identity (dYdX/Bloomberg register), which the owner retired by direct request on 2026-08-24 after finding it too cold/technical. An even earlier split-flap "departures board" identity (flap tiles, rivets, amber/bone palette) was also rejected as a gimmick before that. See DESIGN.md for the current system.
 
 ## Evidence on Hand
 
-No real trade data reviewed yet (wallet not yet synced at time of writing). Current UI is documented in DESIGN.md (redesigned 2026-08-19, replacing the earlier split-flap identity).
+No real trade data reviewed yet (wallet not yet synced at time of writing). Current UI is documented in DESIGN.md (Liquid Glass redesign, 2026-08-24, replacing the prior trading-terminal identity).
 
 ## Product Principles
 
 - Performance readability first: the daily-glance stats (PNL, win rate, open positions) must be immediately legible before any detail view.
 - Read-only trust: never imply the dashboard can edit or place trades — it mirrors Hyperliquid truth.
-- Confident trading-terminal tone: dense, precise, numerical — not a consumer dashboard.
+- Warm, modern instrument tone: precise and numerical, but rendered in soft frosted glass rather than a cold, dense terminal — not a consumer dashboard either.
 - Private tool: no onboarding/marketing framing; optimize for the owner's repeated daily use.

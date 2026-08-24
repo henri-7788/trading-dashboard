@@ -63,28 +63,22 @@ export default function PwaStatus() {
   return (
     <>
       {offline && (
-        <div className="fixed top-0 inset-x-0 z-50 bg-down/10 border-b border-down/40 text-down text-xs font-mono uppercase tracking-widest text-center py-1.5">
-          Keine Verbindung — zuletzt geladene Daten
+        <div className="fixed top-3 inset-x-0 z-50 flex justify-center px-4">
+          <div className="glass-pill glass-pill-down px-4 py-1.5 text-xs uppercase tracking-widest">Keine Verbindung — zuletzt geladene Daten</div>
         </div>
       )}
 
       {!installed && installPrompt && (
-        <div className="fixed bottom-4 inset-x-4 md:inset-x-auto md:right-4 md:w-80 z-50 border border-ink-600 rounded-md bg-ink-900 px-4 py-3 shadow-lg flex items-center gap-3">
+        <div className="glass-panel fixed bottom-4 inset-x-4 md:inset-x-auto md:right-4 md:w-80 z-50 px-4 py-3 flex items-center gap-3">
           <div className="flex-1 min-w-0">
-            <div className="text-xs font-mono uppercase tracking-widest text-ink-100">App installieren</div>
+            <div className="text-xs uppercase tracking-widest text-ink-100">App installieren</div>
             <div className="text-xs text-ink-400 mt-0.5">Als App auf dem Homescreen ablegen — schneller Start, eigenes Fenster.</div>
           </div>
           <div className="flex flex-col gap-1.5 shrink-0">
-            <button
-              onClick={install}
-              className="font-mono text-[10px] uppercase tracking-widest px-3 py-1.5 rounded border border-signal/50 bg-signal/10 text-signal hover:bg-signal/20 transition-colors"
-            >
+            <button onClick={install} className="glass-pill glass-pill-signal px-3 py-1.5 text-[10px] uppercase tracking-widest">
               Installieren
             </button>
-            <button
-              onClick={dismissInstall}
-              className="font-mono text-[10px] uppercase tracking-widest px-3 py-1.5 rounded border border-ink-600 text-ink-400 hover:text-ink-100 transition-colors"
-            >
+            <button onClick={dismissInstall} className="glass-pill px-3 py-1.5 text-[10px] uppercase tracking-widest text-ink-400">
               Nicht jetzt
             </button>
           </div>

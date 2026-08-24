@@ -1,161 +1,164 @@
 ---
 name: Trading Dashboard
-description: A dense, flat, monospace trading terminal for daily PNL review on Hyperliquid.
+description: A Liquid Glass portfolio and trading dashboard — frosted, translucent instrument cards floating over a drifting ambient color field.
 colors:
-  ink-950: "#08090b"
-  ink-900: "#0c0d10"
-  ink-850: "#111318"
-  ink-800: "#16181d"
-  ink-700: "#1e2127"
-  ink-600: "#282c33"
-  ink-500: "#5b6270"
-  ink-400: "#828a99"
-  ink-300: "#a8afb9"
-  ink-100: "#e7e9ed"
-  signal: "#4f8cff"
-  signal-dim: "#2f5bb0"
-  up: "#3fb37f"
-  up-dim: "#1f7a54"
-  down: "#d9564b"
-  down-dim: "#8f3a33"
+  ink-950: "#050609"
+  ink-900: "#0a0c11"
+  ink-850: "#0f121a"
+  ink-800: "#151a23"
+  ink-700: "#1d2330"
+  ink-600: "#2a3242"
+  ink-500: "#5c6577"
+  ink-400: "#8891a3"
+  ink-300: "#aeb6c4"
+  ink-100: "#f2f4f8"
+  signal: "#0a84ff"
+  signal-dim: "#0060df"
+  up: "#32d74b"
+  up-dim: "#1fa834"
+  down: "#ff453a"
+  down-dim: "#d92e24"
+  amber: "#ff9f0a"
+  amber-dim: "#c97800"
 typography:
   ui:
     fontFamily: "Inter, -apple-system, BlinkMacSystemFont, Segoe UI, ui-sans-serif, system-ui, sans-serif"
     fontWeight: 400
-  data:
-    fontFamily: "JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
-    fontWeight: 400
-    lineHeight: 1.4
 rounded:
-  sm: "2px"
-  md: "6px"
+  sm: "16px"
+  md: "20px"
+  lg: "28px"
+  pill: "999px"
 spacing:
   sm: "8px"
   md: "16px"
   lg: "20px"
 components:
   panel:
-    backgroundColor: "{colors.ink-950}"
-    rounded: "{rounded.md}"
+    backgroundColor: "rgba(255,255,255,0.06)"
+    border: "1px solid rgba(255,255,255,0.10)"
+    backdropBlur: "40px"
+    rounded: "{rounded.lg}"
   button-primary:
-    backgroundColor: "{colors.ink-900}"
+    backgroundColor: "rgba(10,132,255,0.15)"
     textColor: "{colors.signal}"
-    rounded: "{rounded.sm}"
+    rounded: "{rounded.pill}"
     padding: "8px 16px"
   button-primary-hover:
-    backgroundColor: "{colors.ink-800}"
+    backgroundColor: "rgba(10,132,255,0.25)"
   input:
-    backgroundColor: "{colors.ink-900}"
+    backgroundColor: "rgba(255,255,255,0.05)"
     textColor: "{colors.ink-100}"
-    rounded: "{rounded.sm}"
+    rounded: "{rounded.md}"
 ---
 
 # Design System: Trading Dashboard
 
 ## Overview
 
-**Creative North Star: "The Instrument Panel"**
+**Creative North Star: "Liquid Glass"**
 
-A private, single-user cockpit for reading Hyperliquid performance in seconds, built in the register of a professional trading terminal — dYdX, Hyperliquid's own app, Bloomberg Terminal — rather than a themed novelty. The system was redesigned away from an earlier split-flap "departures board" identity (flap tiles, rivets, an embossed physical-board metaphor): that identity read as a gimmick rather than a serious instrument, and every trace of it (tile bevels, flip animation, amber/bone palette, grain texture) has been removed. What replaced it is deliberately unglamorous: flat graphite panels, hairline borders, tabular monospace figures, and one restrained accent used only for interactive and "live" signal.
+A private, single-user cockpit for reading portfolio and Hyperliquid performance, rendered as frosted, translucent instrument cards floating over a slow-drifting ambient color field — the Apple visionOS/iOS "Liquid Glass" material register. This replaces the former "Instrument Panel" identity outright at the user's explicit request: the flat graphite terminal, hairline borders, and monospace-heavy Bloomberg/dYdX register are fully retired, not softened. Every panel, button, chip, and input now shares one frosted-glass material — translucent white fill, `backdrop-blur`, a soft white hairline border, an inner sheen, and a diffuse drop shadow — instead of a flat bordered rectangle on solid black.
 
-Density and legibility outrank decoration. The owner opens the dashboard once or twice a day, needs PNL, win rate, and open positions to register instantly, and everything else is secondary. Numbers still move — a value briefly flashes green, red, or blue on live update, the terminal equivalent of a ticker tick — but nothing on the page performs; the only motion is functional feedback.
+Density and legibility still outrank decoration — this is an Operate surface, not a marketing page — but the material itself now carries warmth and depth that the old flat instrument-panel language deliberately refused. Numbers still flash briefly on live update, unchanged from before; the change is entirely in what a "panel" is made of.
 
 **Key Characteristics:**
-- Flat, near-black graphite surfaces with no shadows, gloss, or embossing
-- Hairline 1px borders as the sole structural device — no cards-on-cards
-- All numeric and most UI text set in tabular monospace; one restrained cool-blue accent for interactivity
-- Semantic green/red reserved strictly for PNL and long/short — never decorative
-- A brief background flash marks a live value update instead of a physical animation
+- Frosted glass panels: translucent white fill (`bg-white/6%`), `backdrop-blur-2xl`, hairline white border, inner top sheen, soft outer shadow — no flat, opaque surfaces anywhere
+- A fixed ambient background of three large, slowly drifting blurred color fields (signal blue, up green, amber) behind everything — the material glass panels are meant to refract
+- Fully rounded pill shapes for every button, filter, and status chip; large `20–28px` radii on panels — no small "instrument" corners
+- One consistent sans typeface (Inter) throughout; no monospace face — numeric columns keep `tabular-nums` for alignment without switching families
+- Apple system-palette accents: signal blue, up green, down red, amber — chosen to stay saturated and legible seen through frosted glass
 
 ## Colors
 
-Almost entirely neutral graphite; color is spent only on meaning.
+Neutral graphite base and ambient color fields; accent color is spent on meaning and on the background atmosphere itself.
 
 ### Primary
-- **Signal Blue** (`#4f8cff`): the only non-semantic accent. Used for the sync button, focus rings, active/open-status chips, and the win-rate readout. Nowhere else — its rarity is what makes it read as "live."
+- **Signal Blue** (`#0a84ff`): the primary accent — sync button, focus rings, active/open-status chips, ambient background field. Apple's system blue, chosen for how it reads through blur.
 
 ### Neutral
-- **Void** (`#08090b`, `ink-950`): page background. The only background color in the system; panels do not get a lighter fill, only a border.
-- **Graphite** (`#0c0d10`–`#16181d`, `ink-900`/`ink-850`/`ink-800`): interactive-element fills only — buttons, inputs, select boxes, hover states on table rows. Never used as a panel or card background.
-- **Hairline** (`#1e2127`, `ink-700`): the standard panel and table border.
-- **Hairline Dim** (`#282c33`, `ink-600`): border on inputs/buttons/selects, one step brighter than a panel border to read as interactive.
-- **Muted Text** (`#828a99`, `ink-400`): labels, secondary table values (entry/exit/size/duration/timestamps). Chosen to clear 4.5:1 contrast against `ink-950` — the earlier darker gray failed body-text contrast and was rejected during finishing review.
-- **Primary Text** (`#e7e9ed`, `ink-100`): coin symbols, account balances, and any value that must read as the record, not context.
+- **Void** (`#050609`, `ink-950`): base page background beneath the ambient gradient.
+- **Panel glass**: not a solid color — `rgba(255,255,255,0.06)` fill over `backdrop-blur-2xl`, so panels always show a hint of the ambient field behind them.
+- **Hairline** (`rgba(255,255,255,0.10–0.12)`): the border on every glass panel, pill, and input — a soft white line, not a graphite one, since the surface is translucent.
+- **Muted Text** (`#8891a3`, `ink-400`): labels, secondary table values.
+- **Primary Text** (`#f2f4f8`, `ink-100`): coin symbols, balances, primary readouts.
 
 ### Semantic
-- **Up** (`#3fb37f`): positive PNL, long side. Never used decoratively.
-- **Down** (`#d9564b`): negative PNL, short side, and error states.
+- **Up** (`#32d74b`): positive PNL, long side.
+- **Down** (`#ff453a`): negative PNL, short side, error states.
+- **Amber** (`#ff9f0a`): win rate / profit factor readouts — a third semantic tone reserved for "quality of performance" metrics, distinct from raw PNL direction.
 
 ### Named Rules
-**The Meaning-Only Color Rule.** Signal blue, up-green, and down-red are the only colors permitted outside the neutral graphite scale. If a new element needs color and isn't interactive (blue), a live-value tick (blue), or a PNL/side value (green/red), it stays neutral.
+**The Glass-Only Surface Rule.** Every container — panel, card, button, input, chip — is a frosted-glass surface (translucent fill + blur + hairline border), never a flat opaque fill. A flat solid-color box is a regression to the retired terminal language.
 
 ## Typography
 
-**UI Font:** Inter (with system-ui fallback)
-**Data Font:** JetBrains Mono (with ui-monospace fallback)
+**Font:** Inter (with system-ui fallback) — the only typeface in the system.
 
-**Character:** The interface renders almost entirely in JetBrains Mono — labels, buttons, headers, and table cells alike — the console-register choice a data terminal earns natively; Inter is loaded as the UI face for any future prose-heavy surface (e.g. settings copy) but does not yet appear on a live screen. Every number is `tabular-nums`, so columns of prices and durations align on their digits regardless of value.
+**Character:** Inter throughout, at normal weight for body/labels and semibold for primary readouts and headings. The former all-monospace treatment is gone; only numeric table columns and stat readouts keep `tabular-nums` so digits still align in columns, without pulling in a separate monospace face to do it.
 
 ### Hierarchy
-- **Instrument value** (500 weight, `text-3xl`/`text-4xl`, `tabular`): the four stat-module readouts (PNL, win rate, position counts) and the two equity figures. The largest text on the page.
-- **Body/table** (400 weight, `text-sm`, `tabular` for numeric columns): trade table cells, filter controls.
-- **Label** (400 weight, `text-[10px]`–`text-xs`, `tracking-widest`, uppercase): every stat-module caption and table header. Never used above a heading as a kicker — these are literal instrument labels, not decoration.
+- **Instrument value** (semibold, `text-3xl`/`text-4xl`, `tabular`): the stat-module readouts (PNL, win rate, position counts, equity figures).
+- **Body/table** (regular, `text-sm`, `tabular` for numeric columns): trade table cells, filter controls.
+- **Label** (regular, `text-[10px]`–`text-xs`, `tracking-widest`, uppercase): stat-module captions and table headers.
 
 ## Layout
 
-Single-column, max-width 6xl (1152px), centered, with consistent 12–16px gaps between modules. The account-value row (2-up) and instrument row (2-up mobile / 4-up desktop) sit above the equity curve, filters, and trade table in that fixed reading order. Density stays constant across breakpoints; nothing collapses into a card carousel on mobile, only the grid columns reflow.
+Single-column, max-width 6xl (1152px), centered, 12–16px gaps between modules. The account-value row and instrument rows sit above the equity curve, filters, and trade table in the same reading order as before. Density stays constant across breakpoints.
 
 ## Elevation & Depth
 
-Flat by design. There is no shadow vocabulary — every module is delineated by a single `1px` `ink-700` border against the shared `ink-950` background, never by a lighter fill or a shadow. Depth is not simulated; a panel is legible because of its border, not because it appears to float.
+Depth is now real, not simulated by a border alone. Every panel sits above the ambient background with a soft outer shadow, a `backdrop-blur` that visibly reveals the drifting color fields, and an inset top-edge sheen (`inset 0 1px rgba(255,255,255,0.14)`) that reads as a glass edge catching light.
 
 ### Named Rules
-**The No-Fill Panel Rule.** A panel never gets a background color of its own — only a border. A filled panel on `ink-950` would be the first step back toward the tile/gloss language this redesign removed.
+**The Ambient-Behind-Glass Rule.** A glass panel only reads as glass when something with color and shape sits behind it. The `Background` component's three drifting blurred fields are mounted once, fixed, behind every page — never remove or flatten it, or every panel above it goes back to looking like a plain translucent gray box.
 
 ## Shapes
 
-Small, consistent radii: `6px` on panels and containers, `2px` on buttons, inputs, selects, and status chips. Corners are a quiet structural detail, not a material — nothing rounds enough to read as soft or friendly.
+Large, soft radii throughout: `28px` on panels, `20px` on inputs, full pill (`999px`) on every button, filter control, and status chip. Corners are now a material property of the glass, not a quiet structural detail — softness is the point.
 
 ## Components
 
-### Buttons
-- **Shape:** `2px` radius, hairline `ink-600` border.
-- **Primary (Sync now):** `ink-900` fill, `signal` text, uppercase, `tracking-widest`, mono.
-- **Hover:** fill steps to `ink-800`, border tints toward `signal/50`. No transform, no shadow.
-- **Disabled:** 50% opacity, cursor blocked — the only state treatment beyond color.
+### Buttons / Pills
+- **Shape:** full pill (`rounded-full`), glass fill, hairline white border.
+- **Primary (Sync now, form submit):** `signal`-tinted glass — `bg-signal/15`, `border-signal/30`, `text-signal`.
+- **Neutral:** plain glass — `bg-white/7%`, `border-white/12%`, `text-ink-100`.
+- **Destructive:** `down`-tinted glass, same pill shape.
+- **Hover:** fill opacity steps up; no transform, no shape change.
+- **Disabled:** 50% opacity, cursor blocked.
 
 ### Stat Modules
-- **Shape:** hairline-bordered panel, no fill, `6px` radius, consistent internal padding.
+- **Shape:** `glass-panel`, `28px` radius, consistent internal padding.
 - **Structure:** a `10px` uppercase muted label above one large tabular `FlipValue` readout.
-- **Live update:** the value's background flashes semantic-tinted (green/red/blue depending on tone) for 700ms on change, then fades to transparent — replaces the old physical flip animation.
+- **Live update:** value background flashes semantic-tinted for 700ms on change, unchanged behavior from the prior system.
 
 ### Trade Table
-- **Style:** hairline row dividers (`ink-800`), header row in muted uppercase labels over an `ink-700` rule.
-- **Row hover:** `ink-900` tint at 60% opacity — the only per-row feedback.
-- **Status chip:** `2px` radius, `signal`-tinted for open positions, neutral `ink-700` for closed.
+- **Style:** lives inside one `glass-panel` wrapper; row dividers are `white/6%` hairlines, header row in muted uppercase over a `white/10%` rule.
+- **Row hover:** `white/4%` tint — the only per-row feedback.
+- **Status chip:** full pill, `signal`-tinted glass for open positions, plain glass for closed.
 
 ### Inputs / Selects
-- **Style:** `ink-900` fill, `ink-600` border, `2px` radius, mono text.
-- **Focus:** border shifts to `signal/60`. No glow, no outline ring.
+- **Style:** `rounded-2xl`, `bg-white/5%`, `border-white/12%` glass fill.
+- **Focus:** border shifts to `signal/50%`, fill lightens slightly. No glow, no outline ring.
 
 ### Equity Curve
-- **Signature component.** A bare SVG line-and-area chart, no axes or gridlines beyond a single dashed zero-line, stroked in `up` or `down` depending on the cumulative sign. No dots, no tooltip chrome yet — reads as a trace, not a chart widget.
+- Bare SVG line-and-area chart, unchanged in structure; the area fill is now a vertical gradient fading from the up/down stroke color to transparent, echoing the glass material's own translucency instead of a flat 10%-opacity fill.
 
 ### Forms (Einstellungen)
-- **Field:** a `10px` uppercase muted label stacked above its input, `1.5` gap — never inline label-left, which would break the table-like scan pattern the rest of the system uses.
-- **Panel:** every form lives inside its own hairline-bordered panel, opened inline below the button that triggered it, never a modal — settings are a task, not an interruption.
-- **Actions:** cancel (neutral border) and submit (`signal`-tinted border + fill) sit bottom-right as a pair; destructive actions (remove connection, delete position) use `down`-tinted text on a neutral border instead, and always confirm before executing.
+- **Field:** unchanged pattern — `10px` uppercase muted label stacked above its glass input.
+- **Panel:** every form lives inside its own `glass-panel`, opened inline, never a modal.
+- **Actions:** cancel (plain glass pill) and submit (`signal`-tinted glass pill) sit bottom-right; destructive actions use `down`-tinted glass pills and always confirm before executing.
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** keep every panel borderless-filled — `ink-950` background, `ink-700` border, nothing else.
-- **Do** reserve `signal` blue strictly for interactive and live-update elements.
-- **Do** run every numeric column in `tabular-nums` monospace so digits align.
-- **Do** use the flash-on-change pattern for any future live-updating readout instead of introducing a new motion device.
+- **Do** give every container the glass treatment: translucent fill, blur, hairline border, soft shadow.
+- **Do** keep the ambient `Background` mounted behind every page — it is what the glass blurs against.
+- **Do** run every numeric column in `tabular-nums` so digits align, even without a monospace face.
+- **Do** use full pill shapes for every button, filter, and chip.
 
 ### Don't:
-- **Don't** reintroduce physical/embossed treatments (tile bevels, inset shadows, gradient split panels, rivets) — that identity was deliberately retired, not a lookbook to revisit.
-- **Don't** add a shadow anywhere; depth in this system comes from borders only.
-- **Don't** use amber, bone, or any warm accent — the palette is cool graphite plus signal blue only.
-- **Don't** use `ink-500`/`ink-600` for body text; they read below 4.5:1 on `ink-950` and exist for borders and dividers only.
+- **Don't** reintroduce a flat, opaque panel fill (`bg-ink-900` solid) — that is the retired terminal language.
+- **Don't** use a monospace typeface anywhere; Inter with `tabular-nums` covers every numeric-alignment need.
+- **Don't** use small "instrument" corner radii (`2px`/`6px`) — every shape rounds generously now.
+- **Don't** let a panel sit without the ambient background behind it; a glass panel over flat black reads as a bug, not a material.

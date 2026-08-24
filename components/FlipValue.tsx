@@ -14,7 +14,7 @@ const sizeClasses: Record<string, string> = {
 
 const toneClasses: Record<string, string> = {
   bone: 'text-ink-100',
-  amber: 'text-signal',
+  amber: 'text-amber',
   up: 'text-up',
   down: 'text-down'
 }
@@ -41,7 +41,7 @@ export default function FlipValue({ value, size = 'md', tone = 'bone' }: FlipVal
   return (
     <span
       key={flashKey}
-      className={`inline-block font-mono font-medium tabular rounded px-0.5 -mx-0.5 ${sizeClasses[size]} ${toneClasses[tone]} ${flashKey > 0 ? flashClasses[tone] : ''}`}
+      className={`inline-block font-semibold tabular rounded-lg px-0.5 -mx-0.5 ${sizeClasses[size]} ${toneClasses[tone]} ${flashKey > 0 ? flashClasses[tone] : ''}`}
     >
       {value}
     </span>

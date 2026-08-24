@@ -232,53 +232,47 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-ink-950 flex items-center justify-center">
-        <div className="font-mono text-sm text-ink-300 tabular animate-pulse">Lade Trades…</div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-sm text-ink-300 tabular animate-pulse">Lade Trades…</div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-ink-950 pb-16">
-      {/* THESIS: a professional trading terminal, not a themed novelty — the departures-board gimmick is refused in favor of dense, precise instrumentation.
-          OWN-WORLD: near-black graphite panels, hairline 1px borders, JetBrains Mono tabular figures, Inter UI labels, one restrained cool-blue accent, functional green/red PNL only, flat elevation (no shadows, gloss, or tiles).
-          STORY: owner opens the terminal, scans a shared net-worth overview, then reads Portfolio (holdings) and Trading (perps statistics) as two clearly separated instrument panels.
-          FIRST VIEWPORT: control bar, shared Main Statistik row, Portfolio section header.
-          FORM: canon direction — professional trading terminal (dYdX / Hyperliquid native app / Bloomberg Terminal register), user-selected standing exit.
+    <div className="min-h-screen pb-16">
+      {/* THESIS: Liquid Glass — frosted, translucent instrument panels floating over an ambient color field, replacing the flat graphite terminal outright.
+          OWN-WORLD: rounded glass cards (backdrop-blur, soft white-hairline borders, sheen + shadow), pill-shaped controls and status chips, Apple system accent palette (signal blue / up green / down red / amber), Inter throughout with tabular figures for numbers instead of a monospace face.
+          STORY: owner opens the dashboard, scans a shared net-worth overview through glass, then reads Portfolio (holdings) and Trading (perps statistics) as two clearly separated glass panels.
+          FIRST VIEWPORT: ambient background, glass control bar, shared Main Statistik row as glass stat cards.
+          FORM: user-pinned direction — Liquid Glass (Apple-native frosted-material register), replacing the prior trading-terminal identity by explicit request.
           FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md. */}
       <div className="max-w-6xl mx-auto px-4 md:px-6 pt-8">
-        <header className="border border-ink-700 rounded-md px-5 py-4 mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <header className="glass-panel px-5 py-4 mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="font-mono text-sm tracking-[0.15em] text-ink-100 uppercase">Trading Dashboard</h1>
-            <p className="text-xs text-ink-400 font-mono mt-1">
+            <h1 className="text-base font-semibold text-ink-100">Trading Dashboard</h1>
+            <p className="text-xs text-ink-400 mt-1">
               {connectionLabels.length > 0 ? connectionLabels.join(' · ') : 'Keine Verbindung konfiguriert'}
             </p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <div className="text-right">
-              <div className="text-[10px] uppercase tracking-widest text-ink-400 font-mono">Zuletzt synced</div>
-              <div className="text-xs text-ink-100 font-mono tabular">{lastSyncedAt ? fmtDate(lastSyncedAt) : 'nie'}</div>
+              <div className="text-[10px] uppercase tracking-widest text-ink-400">Zuletzt synced</div>
+              <div className="text-xs text-ink-100 tabular">{lastSyncedAt ? fmtDate(lastSyncedAt) : 'nie'}</div>
             </div>
             <button
               onClick={syncNow}
               disabled={syncing}
-              className="font-mono text-xs uppercase tracking-widest px-4 py-2 rounded border border-ink-600 bg-ink-900 text-signal hover:bg-ink-800 hover:border-signal/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="glass-pill glass-pill-signal px-4 py-2 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {syncing ? 'Syncing…' : 'Sync now'}
             </button>
-            <Link
-              href="/settings"
-              className="font-mono text-xs uppercase tracking-widest px-4 py-2 rounded border border-ink-600 bg-ink-900 text-ink-100 hover:bg-ink-800 hover:border-signal/40 transition-colors"
-              aria-label="Einstellungen"
-            >
+            <Link href="/settings" className="glass-pill px-4 py-2 text-xs font-medium" aria-label="Einstellungen">
               Einstellungen
             </Link>
           </div>
         </header>
 
-        {error && (
-          <div className="mb-6 rounded border border-down/40 bg-down/10 px-4 py-3 text-sm font-mono text-down">{error}</div>
-        )}
+        {error && <div className="glass-panel-tight mb-6 px-4 py-3 text-sm text-down border-down/25">{error}</div>}
 
         {/* Main Statistik — shared overview across Portfolio (stocks/ETFs/crypto) and Trading */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
@@ -299,16 +293,16 @@ export default function Dashboard() {
         <SectionHeader>Portfolio</SectionHeader>
 
         {/* Holdings */}
-        <div className="border border-ink-700 rounded-md overflow-hidden mb-10">
+        <div className="glass-panel overflow-hidden mb-10">
           {holdings.length === 0 ? (
-            <div className="py-12 text-center text-ink-400 font-mono text-sm">
+            <div className="py-12 text-center text-ink-400 text-sm">
               Keine gehaltenen Positionen. Kryptos werden beim Sync erfasst, Aktien/ETFs unter Einstellungen manuell.
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm font-mono">
+              <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-[10px] uppercase tracking-widest text-ink-400 border-b border-ink-700">
+                  <tr className="text-left text-[10px] uppercase tracking-widest text-ink-400 border-b border-white/10">
                     <th className="py-3 px-4 font-medium">Asset</th>
                     <th className="py-3 px-4 font-medium">Typ</th>
                     <th className="py-3 px-4 font-medium">Quelle</th>
@@ -320,7 +314,7 @@ export default function Dashboard() {
                 </thead>
                 <tbody>
                   {holdings.map((h, i) => (
-                    <tr key={`${h.source}-${h.symbol}-${i}`} className="border-b border-ink-800 last:border-0 hover:bg-ink-900/60 transition-colors">
+                    <tr key={`${h.source}-${h.symbol}-${i}`} className="border-b border-white/[0.06] last:border-0 hover:bg-white/[0.04] transition-colors">
                       <td className="py-3 px-4">
                         <div className="text-ink-100 font-medium">{h.name && h.name !== h.symbol ? h.name : h.symbol}</div>
                         {h.name && h.name !== h.symbol && <div className="text-ink-400 text-xs mt-0.5">{h.symbol}</div>}
@@ -382,28 +376,28 @@ export default function Dashboard() {
         </div>
 
         {/* Equity curve */}
-        <div className="border border-ink-700 rounded-md p-5 mb-6">
+        <div className="glass-panel p-5 mb-6">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-mono text-xs uppercase tracking-widest text-ink-400">Equity Curve (kumuliert)</h3>
+            <h3 className="text-xs uppercase tracking-widest text-ink-400">Equity Curve (kumuliert)</h3>
           </div>
           <EquityCurve points={equityPoints} />
         </div>
 
         {/* Filters */}
-        <div className="border border-ink-700 rounded-md p-4 mb-4 flex flex-wrap gap-3 items-center">
+        <div className="glass-panel p-4 mb-4 flex flex-wrap gap-3 items-center">
           <FilterSelect label="Zeitraum" value={range} onChange={(v) => setRange(v as Range)} options={[['all', 'All-Time'], ['30d', '30 Tage'], ['7d', '7 Tage'], ['24h', '24h']]} />
           <FilterSelect label="Status" value={statusFilter} onChange={(v) => setStatusFilter(v as StatusFilter)} options={[['all', 'Alle'], ['open', 'Offen'], ['closed', 'Geschlossen']]} />
           <FilterSelect label="Seite" value={sideFilter} onChange={(v) => setSideFilter(v as SideFilter)} options={[['all', 'Alle'], ['long', 'Long'], ['short', 'Short']]} />
           <FilterSelect label="Coin" value={coinFilter} onChange={setCoinFilter} options={[['all', 'Alle'], ...coins.map((c) => [c, c] as [string, string])]} />
-          <div className="ml-auto text-xs font-mono text-ink-400 tabular">{filtered.length} Trades</div>
+          <div className="ml-auto text-xs text-ink-400 tabular">{filtered.length} Trades</div>
         </div>
 
         {/* Trade table */}
-        <div className="border border-ink-700 rounded-md overflow-hidden">
+        <div className="glass-panel overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm font-mono">
+            <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-[10px] uppercase tracking-widest text-ink-400 border-b border-ink-700">
+                <tr className="text-left text-[10px] uppercase tracking-widest text-ink-400 border-b border-white/10">
                   <th className="py-3 px-4 font-medium">Coin</th>
                   <th className="py-3 px-4 font-medium">Quelle</th>
                   <th className="py-3 px-4 font-medium">Seite</th>
@@ -418,7 +412,7 @@ export default function Dashboard() {
               </thead>
               <tbody>
                 {filtered.map((t) => (
-                  <tr key={t.id} className="border-b border-ink-800 last:border-0 hover:bg-ink-900/60 transition-colors">
+                  <tr key={t.id} className="border-b border-white/[0.06] last:border-0 hover:bg-white/[0.04] transition-colors">
                     <td className="py-3 px-4 text-ink-100 font-medium">{t.coin}</td>
                     <td className="py-3 px-4 text-ink-400">{t.connectionLabel || '—'}</td>
                     <td className="py-3 px-4">
@@ -431,7 +425,7 @@ export default function Dashboard() {
                     <td className="py-3 px-4 tabular text-ink-400">{fmtDuration(t.openedAt, t.closedAt)}</td>
                     <td className="py-3 px-4 tabular text-ink-400">{fmtDate(t.openedAt)}</td>
                     <td className="py-3 px-4">
-                      <span className={`text-[10px] uppercase tracking-widest px-2 py-1 rounded-sm ${t.status === 'open' ? 'bg-signal/15 text-signal' : 'bg-ink-700 text-ink-400'}`}>
+                      <span className={`glass-pill px-2.5 py-1 text-[10px] uppercase tracking-widest ${t.status === 'open' ? 'glass-pill-signal' : ''}`}>
                         {t.status === 'open' ? 'Offen' : 'Geschlossen'}
                       </span>
                     </td>
@@ -442,7 +436,7 @@ export default function Dashboard() {
           </div>
 
           {filtered.length === 0 && (
-            <div className="py-16 text-center text-ink-400 font-mono text-sm">
+            <div className="py-16 text-center text-ink-400 text-sm">
               {trades.length === 0 ? 'Noch keine Trades synced. Klicke auf "Sync now".' : 'Keine Trades in diesem Filter.'}
             </div>
           )}
@@ -455,16 +449,16 @@ export default function Dashboard() {
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-3 mb-4">
-      <h2 className="font-mono text-sm uppercase tracking-[0.2em] text-ink-100 shrink-0">{children}</h2>
-      <div className="h-px flex-1 bg-ink-700" />
+      <h2 className="text-sm uppercase tracking-[0.2em] text-ink-100 shrink-0">{children}</h2>
+      <div className="h-px flex-1 bg-white/10" />
     </div>
   )
 }
 
 function StatModule({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="border border-ink-700 rounded-md px-4 py-4 flex flex-col gap-2">
-      <span className="text-[10px] uppercase tracking-widest text-ink-400 font-mono">{label}</span>
+    <div className="glass-panel px-4 py-4 flex flex-col gap-2">
+      <span className="text-[10px] uppercase tracking-widest text-ink-400">{label}</span>
       {children}
     </div>
   )
@@ -482,15 +476,15 @@ function FilterSelect({
   options: [string, string][]
 }) {
   return (
-    <label className="flex items-center gap-2 text-xs font-mono text-ink-400">
+    <label className="flex items-center gap-2 text-xs text-ink-400">
       <span className="uppercase tracking-widest">{label}</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="bg-ink-900 border border-ink-600 rounded-sm px-2 py-1.5 text-ink-100 focus:outline-none focus:border-signal/60"
+        className="bg-white/[0.05] border border-white/[0.12] rounded-full px-3 py-1.5 text-ink-100 focus:outline-none focus:border-signal/50"
       >
         {options.map(([v, l]) => (
-          <option key={v} value={v}>
+          <option key={v} value={v} className="bg-ink-900">
             {l}
           </option>
         ))}
