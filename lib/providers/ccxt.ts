@@ -44,6 +44,34 @@ export async function syncCcxtConnection(connection: Connection): Promise<Connec
       avgCost: null
     }))
 
+  // Bitvavo's fetchBalance only covers the trading wallet (GET /balance) and never
+  // includes funds locked in staking, which lives in a separate wallet exposed via
+  // GET /stakingBalance. ccxt doesn't wrap that endpoint, so call it via its implicit
+  // method and fold the staked amounts into the matching holding.
+  if (connection.exchangeId === 'bitvavo' && typeof (exchange as unknown as Record<string, unknown>).privateGetStakingBalance === 'function') {
+    try {
+      const staking = (await (exchange as unknown as { privateGetStakingBalance: () => Promise<Array<{ symbol: string; amount: string }>> }).privateGetStakingBalance()) || []
+      for (const entry of staking) {
+        const qty = Number(entry.amount)
+        if (!Number.isFinite(qty) || Math.abs(qty) <= 1e-8) continue
+        const existing = holdings.find((h) => h.symbol === entry.symbol)
+        if (existing) {
+          existing.quantity += qty
+        } else {
+          holdings.push({
+            connectionId: connection.id,
+            symbol: entry.symbol,
+            assetClass: 'crypto' as const,
+            quantity: qty,
+            avgCost: null
+          })
+        }
+      }
+    } catch (err) {
+      console.error(`fetchStakingBalance failed for ${connection.label}`, err)
+    }
+  }
+
   const transactions: TransactionRecord[] = []
   const symbols = connection.symbols
     .split(',')

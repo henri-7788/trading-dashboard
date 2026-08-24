@@ -1,0 +1,18 @@
+{
+  "name": "Trading Dashboard",
+  "short_name": "Trading",
+  "description": "Portfolio- und Trading-Übersicht über alle verbundenen Börsen.",
+  "start_url": "/",
+  "id": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#08090b",
+  "theme_color": "#08090b",
+  "lang": "de",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
