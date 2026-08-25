@@ -94,6 +94,20 @@ body {
   animation: value-flash-neutral 700ms ease-out;
 }
 
+/* PIN entry feedback: a quick horizontal shake marks a wrong code, echoing the
+   flash-on-change pattern used for live value ticks elsewhere in the system. */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-6px); }
+  80% { transform: translateX(6px); }
+}
+
+.animate-shake {
+  animation: shake 400ms ease-in-out;
+}
+
 /* Ambient background — slow drifting color fields the glass panels blur against. Motion is
    large and slow (90s+) so it reads as atmosphere, never as something competing for attention. */
 @keyframes drift-a {
