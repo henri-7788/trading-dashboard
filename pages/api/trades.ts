@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { Query } from 'node-appwrite'
 import { databases, DATABASE_ID, TRADES_COLLECTION_ID, SYNC_STATE_COLLECTION_ID, CONNECTIONS_COLLECTION_ID } from '../../lib/appwriteServer'
-import { fetchMids } from '../../lib/hyperliquid'
+import { fetchAllDexMids } from '../../lib/hyperliquid'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const auth = req.cookies?.trading_auth
@@ -49,7 +49,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const openCoins = new Set(trades.filter((t) => t.status === 'open').map((t) => t.coin))
     if (openCoins.size > 0) {
       try {
-        const mids = await fetchMids()
+        const mids = await fetchAllDexMids()
         for (const t of trades) {
           if (t.status !== 'open') continue
           const mark = parseFloat(mids[t.coin])
@@ -87,6 +87,7 @@ function mapDoc(d: any, labelById: Map<string, string>) {
     fillsCount: d.fillsCount,
     openedAt: d.openedAt,
     closedAt: d.closedAt,
+    leverage: d.leverage ?? null,
     connectionId: d.connectionId || null,
     connectionLabel: d.connectionId ? labelById.get(d.connectionId) || d.connectionId : null
   }

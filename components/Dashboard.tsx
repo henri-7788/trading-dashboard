@@ -19,6 +19,7 @@ interface Trade {
   openedAt: string
   closedAt: string | null
   connectionLabel: string | null
+  leverage: number | null
 }
 
 interface Holding {
@@ -49,6 +50,45 @@ const RANGE_MS: Record<Exclude<Range, 'all'>, number> = {
   '30d': 1000 * 60 * 60 * 24 * 30,
   '7d': 1000 * 60 * 60 * 24 * 7,
   '24h': 1000 * 60 * 60 * 24
+}
+
+// Tries each icon source in order (falls back on load error), then a plain letter avatar.
+function iconSourcesFor(symbol: string, assetClass: 'crypto' | 'stock' | 'etf' | 'other'): string[] {
+  if (assetClass === 'crypto') {
+    const sym = symbol.toLowerCase()
+    return [
+      `https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@0.18.1/32/color/${sym}.png`,
+      `https://assets.coincap.io/assets/icons/${sym}@2x.png`
+    ]
+  }
+  if (assetClass === 'stock' || assetClass === 'etf') {
+    return [`https://financialmodelingprep.com/image-stock/${symbol.toUpperCase()}.png`]
+  }
+  return []
+}
+
+function AssetIcon({ symbol, assetClass }: { symbol: string; assetClass: 'crypto' | 'stock' | 'etf' | 'other' }) {
+  const sources = iconSourcesFor(symbol, assetClass)
+  const [srcIndex, setSrcIndex] = useState(0)
+
+  if (srcIndex >= sources.length) {
+    return (
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-[9px] font-semibold text-ink-400">
+        {symbol.slice(0, 1)}
+      </span>
+    )
+  }
+
+  return (
+    <img
+      key={sources[srcIndex]}
+      src={sources[srcIndex]}
+      alt=""
+      className="h-5 w-5 shrink-0 rounded-full"
+      loading="lazy"
+      onError={() => setSrcIndex((i) => i + 1)}
+    />
+  )
 }
 
 function fmtUsd(n: number) {
@@ -316,8 +356,13 @@ export default function Dashboard() {
                   {holdings.map((h, i) => (
                     <tr key={`${h.source}-${h.symbol}-${i}`} className="border-b border-white/[0.06] last:border-0 hover:bg-white/[0.04] transition-colors">
                       <td className="py-3 px-4">
-                        <div className="text-ink-100 font-medium">{h.name && h.name !== h.symbol ? h.name : h.symbol}</div>
-                        {h.name && h.name !== h.symbol && <div className="text-ink-400 text-xs mt-0.5">{h.symbol}</div>}
+                        <div className="flex items-center gap-2">
+                          <AssetIcon symbol={h.symbol} assetClass={h.assetClass} />
+                          <div>
+                            <div className="text-ink-100 font-medium">{h.name && h.name !== h.symbol ? h.name : h.symbol}</div>
+                            {h.name && h.name !== h.symbol && <div className="text-ink-400 text-xs mt-0.5">{h.symbol}</div>}
+                          </div>
+                        </div>
                       </td>
                       <td className="py-3 px-4 text-ink-400">{ASSET_CLASS_LABEL[h.assetClass]}</td>
                       <td className="py-3 px-4 text-ink-400">{h.sourceLabel}</td>
@@ -413,7 +458,13 @@ export default function Dashboard() {
               <tbody>
                 {filtered.map((t) => (
                   <tr key={t.id} className="border-b border-white/[0.06] last:border-0 hover:bg-white/[0.04] transition-colors">
-                    <td className="py-3 px-4 text-ink-100 font-medium">{t.coin}</td>
+                    <td className="py-3 px-4 text-ink-100 font-medium">
+                      <div className="flex items-center gap-2">
+                        <AssetIcon symbol={t.coin} assetClass="crypto" />
+                        <span>{t.coin}</span>
+                        {t.leverage != null && <span className="text-xs font-normal text-ink-400 tabular">{t.leverage}x</span>}
+                      </div>
+                    </td>
                     <td className="py-3 px-4 text-ink-400">{t.connectionLabel || '—'}</td>
                     <td className="py-3 px-4">
                       <span className={`uppercase text-xs tracking-wide ${t.side === 'long' ? 'text-up' : 'text-down'}`}>{t.side}</span>

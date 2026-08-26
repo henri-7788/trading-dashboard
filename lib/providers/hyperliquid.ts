@@ -2,7 +2,8 @@ import {
   fetchAllFills,
   buildTradesFromFills,
   fetchClearinghouseState,
-  fetchSpotClearinghouseState
+  fetchSpotClearinghouseState,
+  fetchAllDexLeverage
 } from '../hyperliquid'
 import type { Connection, ConnectionSyncResult, HoldingSnapshot } from './types'
 
@@ -19,15 +20,21 @@ export async function syncHyperliquidConnection(connection: Connection): Promise
   const wallet = connection.walletAddress
   if (!wallet) throw new Error(`Connection "${connection.label}" has no wallet address configured`)
 
-  const [fills, perps, spot] = await Promise.all([
+  const [fills, perps, spot, leverageByCoin] = await Promise.all([
     fetchAllFills(wallet),
     fetchClearinghouseState(wallet),
-    fetchSpotClearinghouseState(wallet)
+    fetchSpotClearinghouseState(wallet),
+    // Leverage isn't part of fill data — only the current position's leverage setting is available,
+    // so it's only meaningful (and only attached) for trades that are still open. Positions on
+    // builder-deployed perp dexes (HIP-3, e.g. "OIL") don't show up in the main dex's clearinghouse
+    // state, so every known perp dex is queried and merged.
+    fetchAllDexLeverage(wallet)
   ])
 
   const trades = buildTradesFromFills(fills, wallet).map((t) => ({
     ...t,
-    externalId: `${connection.id}-${t.externalId}`
+    externalId: `${connection.id}-${t.externalId}`,
+    leverage: t.status === 'open' ? leverageByCoin.get(t.coin) ?? null : null
   }))
 
   const spotUsdc = spot.balances.find((b) => b.coin === 'USDC')

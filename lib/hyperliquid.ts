@@ -30,21 +30,54 @@ export interface Trade {
   fillsCount: number
   openedAt: string
   closedAt: string | null
+  /** Current leverage setting for this coin's position; only known for still-open trades. */
+  leverage: number | null
 }
 
-/** Fetches current mid prices for all coins, keyed by coin symbol. */
-export async function fetchMids(): Promise<Record<string, string>> {
-  return hlInfo({ type: 'allMids' })
+/** Fetches current mid prices for all coins, keyed by coin symbol. Pass `dex` for a builder-deployed perp dex (HIP-3); omit for the main dex. */
+export async function fetchMids(dex?: string): Promise<Record<string, string>> {
+  return hlInfo(dex ? { type: 'allMids', dex } : { type: 'allMids' })
+}
+
+export interface PerpDex {
+  name: string
+  fullName: string
+  deployer: string
+}
+
+/** Lists builder-deployed perp dexes (HIP-3) available on top of the main dex. */
+export async function fetchPerpDexs(): Promise<PerpDex[]> {
+  const dexs: (PerpDex | null)[] = await hlInfo({ type: 'perpDexs' })
+  return dexs.filter((d): d is PerpDex => d !== null)
+}
+
+/** Fetches mid prices across the main dex and every builder-deployed perp dex, merged into one coin -> price map. */
+export async function fetchAllDexMids(): Promise<Record<string, string>> {
+  const dexs = await fetchPerpDexs()
+  const perDex = await Promise.all([fetchMids(), ...dexs.map((d) => fetchMids(d.name))])
+  return Object.assign({}, ...perDex)
 }
 
 export interface ClearinghouseState {
   marginSummary: { accountValue: string; totalNtlPos: string; totalRawUsd: string; totalMarginUsed: string }
   withdrawable: string
+  assetPositions: Array<{ position: { coin: string; leverage: { type: 'cross' | 'isolated'; value: number } } }>
 }
 
-/** Fetches perps account equity/margin summary (accountValue = perps cash + unrealized PnL of open positions). */
-export async function fetchClearinghouseState(wallet: string): Promise<ClearinghouseState> {
-  return hlInfo({ type: 'clearinghouseState', user: wallet })
+/** Fetches perps account equity/margin summary (accountValue = perps cash + unrealized PnL of open positions). Pass `dex` for a builder-deployed perp dex (HIP-3); omit for the main dex. */
+export async function fetchClearinghouseState(wallet: string, dex?: string): Promise<ClearinghouseState> {
+  return hlInfo(dex ? { type: 'clearinghouseState', user: wallet, dex } : { type: 'clearinghouseState', user: wallet })
+}
+
+/** Fetches perps positions across the main dex and every builder-deployed perp dex, merged into one coin -> leverage map. */
+export async function fetchAllDexLeverage(wallet: string): Promise<Map<string, number>> {
+  const dexs = await fetchPerpDexs()
+  const states = await Promise.all([fetchClearinghouseState(wallet), ...dexs.map((d) => fetchClearinghouseState(wallet, d.name))])
+  const leverageByCoin = new Map<string, number>()
+  for (const state of states) {
+    for (const p of state.assetPositions) leverageByCoin.set(p.position.coin, p.position.leverage.value)
+  }
+  return leverageByCoin
 }
 
 export interface SpotBalance {
@@ -248,6 +281,7 @@ function finalize(
     fee: pos.fee,
     fillsCount: pos.fillsCount,
     openedAt: new Date(pos.openedAt).toISOString(),
-    closedAt: closedAtMs ? new Date(closedAtMs).toISOString() : null
+    closedAt: closedAtMs ? new Date(closedAtMs).toISOString() : null,
+    leverage: null
   }
 }

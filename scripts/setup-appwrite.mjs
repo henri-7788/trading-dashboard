@@ -158,6 +158,7 @@ async function main() {
   await ensureIntegerAttr(TRADES_COLLECTION_ID, 'fillsCount', true)
   await ensureDatetimeAttr(TRADES_COLLECTION_ID, 'openedAt', true)
   await ensureDatetimeAttr(TRADES_COLLECTION_ID, 'closedAt', false)
+  await ensureFloatAttr(TRADES_COLLECTION_ID, 'leverage', false)
   await ensureStringAttr(TRADES_COLLECTION_ID, 'connectionId', 64, false, '')
   await ensureIndex(TRADES_COLLECTION_ID, 'idx_externalId', IndexType.Unique, ['externalId'])
   await ensureIndex(TRADES_COLLECTION_ID, 'idx_openedAt', IndexType.Key, ['openedAt'])
