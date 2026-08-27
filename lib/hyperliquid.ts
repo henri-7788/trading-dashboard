@@ -32,6 +32,12 @@ export interface Trade {
   closedAt: string | null
   /** Current leverage setting for this coin's position; only known for still-open trades. */
   leverage: number | null
+  /** Estimated liquidation price for this coin's position; only known for still-open trades. */
+  liquidationPrice: number | null
+  /** Isolated margin currently allocated to this position; only known for still-open trades. */
+  margin: number | null
+  /** Funding paid (positive) or received (negative) since this position was opened; only known for still-open trades. */
+  fundingFee: number | null
 }
 
 /** Fetches current mid prices for all coins, keyed by coin symbol. Pass `dex` for a builder-deployed perp dex (HIP-3); omit for the main dex. */
@@ -61,7 +67,33 @@ export async function fetchAllDexMids(): Promise<Record<string, string>> {
 export interface ClearinghouseState {
   marginSummary: { accountValue: string; totalNtlPos: string; totalRawUsd: string; totalMarginUsed: string }
   withdrawable: string
-  assetPositions: Array<{ position: { coin: string; leverage: { type: 'cross' | 'isolated'; value: number } } }>
+  assetPositions: Array<{
+    position: {
+      coin: string
+      leverage: { type: 'cross' | 'isolated'; value: number }
+      liquidationPx: string | null
+      marginUsed: string
+      cumFunding: { allTime: string; sinceOpen: string; sinceChange: string }
+      unrealizedPnl: string
+      returnOnEquity: string
+    }
+  }>
+}
+
+export interface DexPositionInfo {
+  leverage: number
+  liquidationPrice: number | null
+  margin: number | null
+  /**
+   * Funding cost since this position was opened: positive = paid, negative = received.
+   * Hyperliquid's raw `cumFunding.sinceOpen` uses the opposite (PnL-style) convention — positive
+   * means received — but its own UI displays this column as a plain cost figure, so the sign is
+   * flipped here to match what the exchange actually shows.
+   */
+  fundingFee: number | null
+  unrealizedPnl: number | null
+  /** Return on equity as a percentage (already ×100), matching what Hyperliquid's UI displays. */
+  roePct: number | null
 }
 
 /** Fetches perps account equity/margin summary (accountValue = perps cash + unrealized PnL of open positions). Pass `dex` for a builder-deployed perp dex (HIP-3); omit for the main dex. */
@@ -69,15 +101,31 @@ export async function fetchClearinghouseState(wallet: string, dex?: string): Pro
   return hlInfo(dex ? { type: 'clearinghouseState', user: wallet, dex } : { type: 'clearinghouseState', user: wallet })
 }
 
-/** Fetches perps positions across the main dex and every builder-deployed perp dex, merged into one coin -> leverage map. */
-export async function fetchAllDexLeverage(wallet: string): Promise<Map<string, number>> {
+/** Fetches perps positions across the main dex and every builder-deployed perp dex, merged into one coin -> position info map. */
+export async function fetchAllDexPositions(wallet: string): Promise<Map<string, DexPositionInfo>> {
   const dexs = await fetchPerpDexs()
   const states = await Promise.all([fetchClearinghouseState(wallet), ...dexs.map((d) => fetchClearinghouseState(wallet, d.name))])
-  const leverageByCoin = new Map<string, number>()
-  for (const state of states) {
-    for (const p of state.assetPositions) leverageByCoin.set(p.position.coin, p.position.leverage.value)
+  const infoByCoin = new Map<string, DexPositionInfo>()
+  const num = (s: string | null | undefined) => {
+    if (s == null) return null
+    const n = parseFloat(s)
+    return Number.isFinite(n) ? n : null
   }
-  return leverageByCoin
+  const negate = (n: number | null) => (n == null ? null : -n)
+  for (const state of states) {
+    for (const p of state.assetPositions) {
+      const roe = num(p.position.returnOnEquity)
+      infoByCoin.set(p.position.coin, {
+        leverage: p.position.leverage.value,
+        liquidationPrice: num(p.position.liquidationPx),
+        margin: num(p.position.marginUsed),
+        fundingFee: negate(num(p.position.cumFunding?.sinceOpen)),
+        unrealizedPnl: num(p.position.unrealizedPnl),
+        roePct: roe != null ? roe * 100 : null
+      })
+    }
+  }
+  return infoByCoin
 }
 
 export interface SpotBalance {
@@ -282,6 +330,9 @@ function finalize(
     fillsCount: pos.fillsCount,
     openedAt: new Date(pos.openedAt).toISOString(),
     closedAt: closedAtMs ? new Date(closedAtMs).toISOString() : null,
-    leverage: null
+    leverage: null,
+    liquidationPrice: null,
+    margin: null,
+    fundingFee: null
   }
 }

@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { Query } from 'node-appwrite'
 import { databases, DATABASE_ID, TRADES_COLLECTION_ID, SYNC_STATE_COLLECTION_ID, CONNECTIONS_COLLECTION_ID } from '../../lib/appwriteServer'
-import { fetchAllDexMids } from '../../lib/hyperliquid'
+import { fetchAllDexMids, fetchAllDexPositions } from '../../lib/hyperliquid'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const auth = req.cookies?.trading_auth
@@ -36,6 +36,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       databases.listDocuments({ databaseId: DATABASE_ID, collectionId: SYNC_STATE_COLLECTION_ID, queries: [Query.limit(100)] })
     ])
     const labelById = new Map(connectionsResult.documents.map((c) => [c.$id, c.label as string]))
+    const walletByConnectionId = new Map(
+      connectionsResult.documents.filter((c) => c.walletAddress).map((c) => [c.$id, c.walletAddress as string])
+    )
 
     const lastSyncedAt =
       syncStatesResult.documents
@@ -46,20 +49,50 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const trades = pages.map((d) => mapDoc(d, labelById))
 
-    const openCoins = new Set(trades.filter((t) => t.status === 'open').map((t) => t.coin))
-    if (openCoins.size > 0) {
+    const openTrades = trades.filter((t) => t.status === 'open')
+    if (openTrades.length > 0) {
+      // Mark price for display purposes (independent of wallet).
       try {
         const mids = await fetchAllDexMids()
-        for (const t of trades) {
-          if (t.status !== 'open') continue
+        for (const t of openTrades) {
           const mark = parseFloat(mids[t.coin])
-          if (!Number.isFinite(mark)) continue
-          const unrealizedPnl = t.side === 'long' ? (mark - t.entryPrice) * t.size : (t.entryPrice - mark) * t.size
-          t.markPrice = mark
-          t.pnl += unrealizedPnl
+          if (Number.isFinite(mark)) t.markPrice = mark
         }
       } catch (err) {
         console.error('failed to fetch mark prices', err)
+      }
+
+      // PnL, ROE, margin, liquidation price and funding all move continuously (funding accrues
+      // every hour, margin/leverage can be adjusted any time), so the values persisted at last sync
+      // can be stale or even wrong-signed by the time this loads. Pull them fresh from Hyperliquid's
+      // clearinghouseState per wallet, straight from the same fields the Hyperliquid UI itself reads
+      // (unrealizedPnl, returnOnEquity, marginUsed, liquidationPx, cumFunding.sinceOpen) so the
+      // numbers match exactly instead of being independently recomputed.
+      const walletsToQuery = new Set(
+        openTrades.map((t) => (t.connectionId ? walletByConnectionId.get(t.connectionId) : undefined)).filter((w): w is string => Boolean(w))
+      )
+      const positionsByWallet = new Map<string, Awaited<ReturnType<typeof fetchAllDexPositions>>>()
+      await Promise.all(
+        Array.from(walletsToQuery).map(async (wallet) => {
+          try {
+            positionsByWallet.set(wallet, await fetchAllDexPositions(wallet))
+          } catch (err) {
+            console.error(`failed to fetch live positions for wallet ${wallet}`, err)
+          }
+        })
+      )
+
+      for (const t of openTrades) {
+        const wallet = t.connectionId ? walletByConnectionId.get(t.connectionId) : undefined
+        const info = wallet ? positionsByWallet.get(wallet)?.get(t.coin) : undefined
+        if (!info) continue
+        t.realizedPnl = t.pnl
+        if (info.unrealizedPnl != null) t.pnl = info.unrealizedPnl
+        t.roe = info.roePct
+        t.leverage = info.leverage
+        t.liquidationPrice = info.liquidationPrice
+        t.margin = info.margin
+        t.fundingFee = info.fundingFee
       }
     }
 
@@ -83,11 +116,16 @@ function mapDoc(d: any, labelById: Map<string, string>) {
     size: d.size,
     notional: d.notional,
     pnl: d.pnl,
+    realizedPnl: null as number | null,
+    roe: null as number | null,
     fee: d.fee,
     fillsCount: d.fillsCount,
     openedAt: d.openedAt,
     closedAt: d.closedAt,
     leverage: d.leverage ?? null,
+    liquidationPrice: d.liquidationPrice ?? null,
+    margin: d.margin ?? null,
+    fundingFee: d.fundingFee ?? null,
     connectionId: d.connectionId || null,
     connectionLabel: d.connectionId ? labelById.get(d.connectionId) || d.connectionId : null
   }

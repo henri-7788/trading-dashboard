@@ -14,12 +14,20 @@ interface Trade {
   size: number
   notional: number
   pnl: number
+  /** Realized PnL banked from partial closes on this position before the current live snapshot; only set for open trades. */
+  realizedPnl: number | null
+  /** Return on equity in %, pulled directly from Hyperliquid's own returnOnEquity field; only set for open trades. */
+  roe: number | null
   fee: number
   fillsCount: number
   openedAt: string
   closedAt: string | null
   connectionLabel: string | null
   leverage: number | null
+  liquidationPrice: number | null
+  margin: number | null
+  fundingFee: number | null
+  markPrice: number | null
 }
 
 interface Holding {
@@ -96,6 +104,63 @@ function fmtUsd(n: number) {
   return `${sign}$${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
+/** PnL relative to margin, i.e. ROI on the capital actually at risk. Prefers Hyperliquid's own live returnOnEquity so it matches the exchange exactly; falls back to margin/notional-based estimates for closed trades or when live data is unavailable. */
+function pnlPct(t: Trade): number | null {
+  if (t.roe != null) return t.roe
+  const margin = t.margin ?? (t.leverage ? t.notional / t.leverage : t.notional)
+  if (!margin) return null
+  return (t.pnl / margin) * 100
+}
+
+function fmtPct(n: number) {
+  const sign = n >= 0 ? '+' : '-'
+  return `${sign}${Math.abs(n).toFixed(1)}%`
+}
+
+/** How close the trade's mark price is to its liquidation price, as a fraction of the mark price (0 = at liquidation). Only meaningful for open trades. */
+function liquidationDistancePct(t: Trade): number | null {
+  if (t.status !== 'open' || t.liquidationPrice == null || t.markPrice == null || t.markPrice === 0) return null
+  return (Math.abs(t.markPrice - t.liquidationPrice) / t.markPrice) * 100
+}
+
+/**
+ * Fraction of the original entry-to-liquidation price buffer that's still left, using the current
+ * mark price. 1.0 = same distance as at entry, >1 = price has moved favorably and the buffer grew,
+ * <1 = price has moved against the position and eaten into the buffer, 0 = at liquidation.
+ * Raw price-distance-to-liquidation isn't leverage-aware — at 15x, liquidation sits only ~6-7% from
+ * entry by construction, so a plain "% away from liquidation" threshold flags every high-leverage
+ * trade as risky even when it's deep in profit. Comparing against the buffer at entry fixes that.
+ */
+function liquidationBufferRatio(t: Trade): number | null {
+  if (t.status !== 'open' || t.liquidationPrice == null || t.markPrice == null) return null
+  const bufferAtEntry = Math.abs(t.entryPrice - t.liquidationPrice)
+  if (bufferAtEntry === 0) return null
+  const bufferNow = Math.abs(t.markPrice - t.liquidationPrice)
+  return bufferNow / bufferAtEntry
+}
+
+/** Liquidation risk tier for a trade, independent of PnL sign — based on how much of the entry buffer to liquidation is left, not raw price distance. */
+function liquidationRisk(t: Trade): 'critical' | 'warning' | 'caution' | null {
+  const ratio = liquidationBufferRatio(t)
+  if (ratio == null) return null
+  if (ratio <= 0.15) return 'critical'
+  if (ratio <= 0.35) return 'warning'
+  if (ratio <= 0.6) return 'caution'
+  return null
+}
+
+const LIQUIDATION_RISK_STYLE: Record<'critical' | 'warning' | 'caution', string> = {
+  critical: 'text-down animate-pulse',
+  warning: 'text-down',
+  caution: 'text-amber'
+}
+
+const LIQUIDATION_RISK_LABEL: Record<'critical' | 'warning' | 'caution', string> = {
+  critical: 'Sehr nah am Liquidationslevel',
+  warning: 'Nah am Liquidationslevel',
+  caution: 'Nähert sich dem Liquidationslevel'
+}
+
 function fmtDate(iso: string | null) {
   if (!iso) return '—'
   const d = new Date(iso)
@@ -136,6 +201,7 @@ export default function Dashboard() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('open')
   const [sideFilter, setSideFilter] = useState<SideFilter>('all')
   const [coinFilter, setCoinFilter] = useState<string>('all')
+  const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null)
 
   const load = async () => {
     setError(null)
@@ -447,10 +513,10 @@ export default function Dashboard() {
                   <th className="py-3 px-4 font-medium">Quelle</th>
                   <th className="py-3 px-4 font-medium">Seite</th>
                   <th className="py-3 px-4 font-medium">Entry</th>
-                  <th className="py-3 px-4 font-medium">Exit</th>
+                  <th className="py-3 px-4 font-medium">Margin</th>
                   <th className="py-3 px-4 font-medium">Size</th>
                   <th className="py-3 px-4 font-medium">PNL</th>
-                  <th className="py-3 px-4 font-medium">Dauer</th>
+                  <th className="py-3 px-4 font-medium">Funding</th>
                   <th className="py-3 px-4 font-medium">Geöffnet</th>
                   <th className="py-3 px-4 font-medium">Status</th>
                 </tr>
@@ -470,15 +536,30 @@ export default function Dashboard() {
                       <span className={`uppercase text-xs tracking-wide ${t.side === 'long' ? 'text-up' : 'text-down'}`}>{t.side}</span>
                     </td>
                     <td className="py-3 px-4 tabular text-ink-400">{t.entryPrice.toLocaleString('en-US', { maximumFractionDigits: 4 })}</td>
-                    <td className="py-3 px-4 tabular text-ink-400">{t.exitPrice != null ? t.exitPrice.toLocaleString('en-US', { maximumFractionDigits: 4 }) : '—'}</td>
+                    <td className="py-3 px-4 tabular text-ink-400">{t.margin != null ? fmtUsd(t.margin) : '—'}</td>
                     <td className="py-3 px-4 tabular text-ink-400">{t.size.toLocaleString('en-US', { maximumFractionDigits: 4 })}</td>
-                    <td className={`py-3 px-4 tabular font-medium ${t.pnl >= 0 ? 'text-up' : 'text-down'}`}>{fmtUsd(t.pnl)}</td>
-                    <td className="py-3 px-4 tabular text-ink-400">{fmtDuration(t.openedAt, t.closedAt)}</td>
+                    <td className={`py-3 px-4 tabular font-medium ${t.pnl >= 0 ? 'text-up' : 'text-down'}`}>
+                      {fmtUsd(t.pnl)}
+                      {pnlPct(t) != null && <span className="ml-1.5 text-xs font-normal opacity-70">({fmtPct(pnlPct(t)!)})</span>}
+                      {liquidationRisk(t) && (
+                        <span
+                          className={`ml-1.5 text-xs align-middle ${LIQUIDATION_RISK_STYLE[liquidationRisk(t)!]}`}
+                          title={`${LIQUIDATION_RISK_LABEL[liquidationRisk(t)!]} (${liquidationDistancePct(t)!.toFixed(1)}% Abstand)`}
+                        >
+                          ⚠
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 tabular text-ink-400">{t.fundingFee != null ? fmtUsd(t.fundingFee) : '—'}</td>
                     <td className="py-3 px-4 tabular text-ink-400">{fmtDate(t.openedAt)}</td>
                     <td className="py-3 px-4">
-                      <span className={`glass-pill px-2.5 py-1 text-[10px] uppercase tracking-widest ${t.status === 'open' ? 'glass-pill-signal' : ''}`}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedTrade(t)}
+                        className={`glass-pill px-2.5 py-1 text-[10px] uppercase tracking-widest cursor-pointer hover:opacity-80 transition-opacity ${t.status === 'open' ? 'glass-pill-signal' : ''}`}
+                      >
                         {t.status === 'open' ? 'Offen' : 'Geschlossen'}
-                      </span>
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -492,6 +573,66 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+      </div>
+
+      {selectedTrade && <TradeDetailModal trade={selectedTrade} onClose={() => setSelectedTrade(null)} />}
+    </div>
+  )
+}
+
+function TradeDetailModal({ trade: t, onClose }: { trade: Trade; onClose: () => void }) {
+  const roe = pnlPct(t)
+  const risk = liquidationRisk(t)
+  const rows: [string, React.ReactNode][] = [
+    ['Coin', t.coin],
+    ['Quelle', t.connectionLabel || '—'],
+    ['Seite', t.side === 'long' ? 'Long' : 'Short'],
+    ['Status', t.status === 'open' ? 'Offen' : 'Geschlossen'],
+    ['Leverage', t.leverage != null ? `${t.leverage}x` : '—'],
+    ['Entry-Preis', t.entryPrice.toLocaleString('en-US', { maximumFractionDigits: 4 })],
+    ['Exit-Preis', t.exitPrice != null ? t.exitPrice.toLocaleString('en-US', { maximumFractionDigits: 4 }) : '—'],
+    ['Mark-Preis', t.markPrice != null ? t.markPrice.toLocaleString('en-US', { maximumFractionDigits: 4 }) : '—'],
+    ['Liquidationspreis', t.liquidationPrice != null ? t.liquidationPrice.toLocaleString('en-US', { maximumFractionDigits: 4 }) : '—'],
+    ['Size', t.size.toLocaleString('en-US', { maximumFractionDigits: 6 })],
+    ['Notional', fmtUsd(t.notional)],
+    ['Margin (Isolated)', t.margin != null ? fmtUsd(t.margin) : '—'],
+    ['PnL (live/unrealisiert)', <span className={t.pnl >= 0 ? 'text-up' : 'text-down'}>{fmtUsd(t.pnl)}</span>],
+    ...(t.realizedPnl != null
+      ? ([['Bereits realisiert', <span className={t.realizedPnl >= 0 ? 'text-up' : 'text-down'}>{fmtUsd(t.realizedPnl)}</span>]] as [string, React.ReactNode][])
+      : []),
+    ['ROE', roe != null ? <span className={roe >= 0 ? 'text-up' : 'text-down'}>{fmtPct(roe)}</span> : '—'],
+    ['Funding', t.fundingFee != null ? fmtUsd(t.fundingFee) : '—'],
+    ['Gebühren', fmtUsd(t.fee)],
+    ['Fills', String(t.fillsCount)],
+    ['Geöffnet', fmtDate(t.openedAt)],
+    ['Geschlossen', fmtDate(t.closedAt)]
+  ]
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="glass-panel w-full max-w-md max-h-[85vh] overflow-y-auto p-5" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <AssetIcon symbol={t.coin} assetClass="crypto" />
+            <h3 className="text-ink-100 font-medium">{t.coin}</h3>
+            {risk && (
+              <span className={`text-xs ${LIQUIDATION_RISK_STYLE[risk]}`} title={LIQUIDATION_RISK_LABEL[risk]}>
+                ⚠ {LIQUIDATION_RISK_LABEL[risk]}
+              </span>
+            )}
+          </div>
+          <button type="button" onClick={onClose} className="text-ink-400 hover:text-ink-100 transition-colors text-sm">
+            ✕
+          </button>
+        </div>
+        <dl className="text-sm divide-y divide-white/[0.06]">
+          {rows.map(([label, value]) => (
+            <div key={label} className="flex items-center justify-between py-2 gap-4">
+              <dt className="text-ink-400">{label}</dt>
+              <dd className="tabular text-ink-100 text-right">{value}</dd>
+            </div>
+          ))}
+        </dl>
       </div>
     </div>
   )
