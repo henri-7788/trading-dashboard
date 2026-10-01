@@ -142,3 +142,28 @@ body {
     animation: none;
   }
 }
+
+/* Skeleton placeholders — a faint glass bar with a slow sheen sweeping across, so loading
+   regions keep the final layout's shape instead of collapsing into a single spinner. */
+@keyframes skeleton-sheen {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton {
+  @apply rounded-full;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.06) 25%,
+    rgba(255, 255, 255, 0.13) 50%,
+    rgba(255, 255, 255, 0.06) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-sheen 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}

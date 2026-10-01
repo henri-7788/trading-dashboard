@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, FormEvent } from 'react'
 import Link from 'next/link'
+import Skeleton from '../components/Skeleton'
 
 interface TickerSuggestion {
   symbol: string
@@ -142,8 +143,34 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-sm text-ink-300 tabular animate-pulse">Lade Einstellungen…</div>
+      <div className="min-h-screen pb-16" aria-busy="true" aria-label="Lade Einstellungen">
+        <div className="max-w-3xl mx-auto px-4 md:px-6 pt-8">
+          <header className="glass-panel px-5 py-4 mb-6 flex items-center justify-between gap-4">
+            <div>
+              <h1 className="text-base font-semibold text-ink-100">Einstellungen</h1>
+              <p className="text-xs text-ink-400 mt-1">Verbindungen &amp; manuelle Positionen</p>
+            </div>
+            <Link href="/" className="glass-pill px-4 py-2 text-xs font-medium">
+              ← Dashboard
+            </Link>
+          </header>
+          {[2, 3].map((count, section) => (
+            <section key={section} className="mb-8">
+              <Skeleton className="h-3 w-48 mb-4" />
+              <div className="flex flex-col gap-3">
+                {Array.from({ length: count }, (_, i) => (
+                  <div key={i} className="glass-panel px-4 py-4 flex items-center justify-between gap-4">
+                    <div className="flex flex-col gap-2 min-w-0 flex-1">
+                      <Skeleton className="h-3.5 w-40" />
+                      <Skeleton className="h-3 w-64 max-w-full" />
+                    </div>
+                    <Skeleton className="h-7 w-20 shrink-0" />
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
       </div>
     )
   }

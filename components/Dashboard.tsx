@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import FlipValue from './FlipValue'
 import EquityCurve from './EquityCurve'
+import Skeleton, { SkeletonTableRows } from './Skeleton'
 
 interface Trade {
   id: string
@@ -48,6 +49,49 @@ const ASSET_CLASS_LABEL: Record<string, string> = {
   stock: 'Aktie',
   etf: 'ETF',
   other: 'Sonstiges'
+}
+
+type HoldingSortKey = 'name' | 'assetClass' | 'source' | 'quantity' | 'price' | 'value' | 'unrealizedPnl'
+type SortDir = 'asc' | 'desc'
+
+const HOLDING_COLUMNS: { key: HoldingSortKey; label: string; numeric: boolean }[] = [
+  { key: 'name', label: 'Asset', numeric: false },
+  { key: 'assetClass', label: 'Typ', numeric: false },
+  { key: 'source', label: 'Quelle', numeric: false },
+  { key: 'quantity', label: 'Menge', numeric: true },
+  { key: 'price', label: 'Kurs', numeric: true },
+  { key: 'value', label: 'Wert', numeric: true },
+  { key: 'unrealizedPnl', label: 'Unrealisiert', numeric: true }
+]
+
+/** Rows visible while the holdings table is collapsed. */
+const HOLDINGS_COLLAPSED_COUNT = 3
+
+function holdingSortValue(h: Holding, key: HoldingSortKey): string | number | null {
+  switch (key) {
+    case 'name':
+      return (h.name && h.name !== h.symbol ? h.name : h.symbol).toLowerCase()
+    case 'assetClass':
+      return ASSET_CLASS_LABEL[h.assetClass]
+    case 'source':
+      return h.sourceLabel.toLowerCase()
+    default:
+      return h[key]
+  }
+}
+
+/** Sorts holdings by the given column; missing values always sink to the bottom regardless of direction. */
+function sortHoldings(holdings: Holding[], key: HoldingSortKey, dir: SortDir): Holding[] {
+  const factor = dir === 'asc' ? 1 : -1
+  return [...holdings].sort((a, b) => {
+    const va = holdingSortValue(a, key)
+    const vb = holdingSortValue(b, key)
+    if (va == null && vb == null) return 0
+    if (va == null) return 1
+    if (vb == null) return -1
+    if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * factor
+    return String(va).localeCompare(String(vb), 'de') * factor
+  })
 }
 
 type Range = 'all' | '30d' | '7d' | '24h'
@@ -196,12 +240,17 @@ export default function Dashboard() {
   const [accountValue, setAccountValue] = useState<number | null>(null)
   const [withdrawable, setWithdrawable] = useState<number | null>(null)
   const [holdingsValue, setHoldingsValue] = useState<number | null>(null)
+  const [accountLoaded, setAccountLoaded] = useState(false)
+  const [holdingsLoaded, setHoldingsLoaded] = useState(false)
+  const initialSyncStarted = useRef(false)
 
   const [range, setRange] = useState<Range>('all')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('open')
   const [sideFilter, setSideFilter] = useState<SideFilter>('all')
   const [coinFilter, setCoinFilter] = useState<string>('all')
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null)
+  const [holdingSort, setHoldingSort] = useState<{ key: HoldingSortKey; dir: SortDir }>({ key: 'value', dir: 'desc' })
+  const [holdingsExpanded, setHoldingsExpanded] = useState(false)
 
   const load = async () => {
     setError(null)
@@ -223,6 +272,7 @@ export default function Dashboard() {
 
   const loadAccount = async () => {
     const res = await fetch('/api/account')
+    setAccountLoaded(true)
     if (!res.ok) return
     const data = await res.json()
     setAccountValue(typeof data.accountValue === 'number' ? data.accountValue : null)
@@ -233,6 +283,7 @@ export default function Dashboard() {
 
   const loadHoldings = async () => {
     const res = await fetch('/api/holdings')
+    setHoldingsLoaded(true)
     if (!res.ok) return
     const data = await res.json()
     setHoldings(data.holdings || [])
@@ -242,6 +293,13 @@ export default function Dashboard() {
     load()
     loadAccount()
     loadHoldings()
+
+    // Every visit pulls fresh data from the exchanges; the cached data above renders meanwhile.
+    // The ref guards against React StrictMode's double-mount firing two syncs in dev.
+    if (!initialSyncStarted.current) {
+      initialSyncStarted.current = true
+      syncNow()
+    }
 
     const pricesInterval = setInterval(() => {
       load()
@@ -280,6 +338,17 @@ export default function Dashboard() {
     } finally {
       setSyncing(false)
     }
+  }
+
+  const sortedHoldings = useMemo(() => sortHoldings(holdings, holdingSort.key, holdingSort.dir), [holdings, holdingSort])
+  const visibleHoldings = holdingsExpanded ? sortedHoldings : sortedHoldings.slice(0, HOLDINGS_COLLAPSED_COUNT)
+  const hiddenHoldingsCount = sortedHoldings.length - HOLDINGS_COLLAPSED_COUNT
+
+  // Clicking the active column flips direction; a new column starts highest-first for numbers, A–Z for text.
+  const toggleHoldingSort = (key: HoldingSortKey, numeric: boolean) => {
+    setHoldingSort((cur) =>
+      cur.key === key ? { key, dir: cur.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: numeric ? 'desc' : 'asc' }
+    )
   }
 
   const coins = useMemo(() => Array.from(new Set(trades.map((t) => t.coin))).sort(), [trades])
@@ -336,14 +405,6 @@ export default function Dashboard() {
     })
   }, [statsScoped])
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-sm text-ink-300 tabular animate-pulse">Lade Trades…</div>
-      </div>
-    )
-  }
-
   return (
     <div className="min-h-screen pb-16">
       {/* THESIS: Liquid Glass — frosted, translucent instrument panels floating over an ambient color field, replacing the flat graphite terminal outright.
@@ -356,14 +417,22 @@ export default function Dashboard() {
         <header className="glass-panel px-5 py-4 mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-base font-semibold text-ink-100">Trading Dashboard</h1>
-            <p className="text-xs text-ink-400 mt-1">
-              {connectionLabels.length > 0 ? connectionLabels.join(' · ') : 'Keine Verbindung konfiguriert'}
-            </p>
+            {accountLoaded ? (
+              <p className="text-xs text-ink-400 mt-1">
+                {connectionLabels.length > 0 ? connectionLabels.join(' · ') : 'Keine Verbindung konfiguriert'}
+              </p>
+            ) : (
+              <Skeleton className="h-3 w-40 mt-2" />
+            )}
           </div>
           <div className="flex items-center gap-3">
             <div className="text-right">
               <div className="text-[10px] uppercase tracking-widest text-ink-400">Zuletzt synced</div>
-              <div className="text-xs text-ink-100 tabular">{lastSyncedAt ? fmtDate(lastSyncedAt) : 'nie'}</div>
+              {loading ? (
+                <Skeleton className="h-3 w-24 mt-1 ml-auto" />
+              ) : (
+                <div className="text-xs text-ink-100 tabular">{lastSyncedAt ? fmtDate(lastSyncedAt) : 'nie'}</div>
+              )}
             </div>
             <button
               onClick={syncNow}
@@ -382,16 +451,16 @@ export default function Dashboard() {
 
         {/* Main Statistik — shared overview across Portfolio (stocks/ETFs/crypto) and Trading */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-          <StatModule label="Gesamtvermögen">
+          <StatModule label="Gesamtvermögen" loading={!accountLoaded}>
             <FlipValue value={accountValue != null ? fmtUsd(accountValue) : '—'} size="lg" tone="bone" />
           </StatModule>
-          <StatModule label="Portfolio-Wert">
+          <StatModule label="Portfolio-Wert" loading={!accountLoaded}>
             <FlipValue value={holdingsValue != null ? fmtUsd(holdingsValue) : '—'} size="lg" tone="bone" />
           </StatModule>
-          <StatModule label="Trading PNL (All-Time)">
+          <StatModule label="Trading PNL (All-Time)" loading={loading}>
             <FlipValue value={fmtUsd(allTimeTradingPnl)} size="lg" tone={allTimeTradingPnl >= 0 ? 'up' : 'down'} />
           </StatModule>
-          <StatModule label="Verfügbares Cash">
+          <StatModule label="Verfügbares Cash" loading={!accountLoaded}>
             <FlipValue value={withdrawable != null ? fmtUsd(withdrawable) : '—'} size="lg" tone="bone" />
           </StatModule>
         </div>
@@ -400,7 +469,7 @@ export default function Dashboard() {
 
         {/* Holdings */}
         <div className="glass-panel overflow-hidden mb-10">
-          {holdings.length === 0 ? (
+          {holdingsLoaded && holdings.length === 0 ? (
             <div className="py-12 text-center text-ink-400 text-sm">
               Keine gehaltenen Positionen. Kryptos werden beim Sync erfasst, Aktien/ETFs unter Einstellungen manuell.
             </div>
@@ -409,17 +478,32 @@ export default function Dashboard() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-[10px] uppercase tracking-widest text-ink-400 border-b border-white/10">
-                    <th className="py-3 px-4 font-medium">Asset</th>
-                    <th className="py-3 px-4 font-medium">Typ</th>
-                    <th className="py-3 px-4 font-medium">Quelle</th>
-                    <th className="py-3 px-4 font-medium">Menge</th>
-                    <th className="py-3 px-4 font-medium">Kurs</th>
-                    <th className="py-3 px-4 font-medium">Wert</th>
-                    <th className="py-3 px-4 font-medium">Unrealisiert</th>
+                    {HOLDING_COLUMNS.map((col) => {
+                      const active = holdingSort.key === col.key
+                      return (
+                        <th
+                          key={col.key}
+                          className="py-3 px-4 font-medium"
+                          aria-sort={active ? (holdingSort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => toggleHoldingSort(col.key, col.numeric)}
+                            className={`inline-flex items-center gap-1 uppercase tracking-widest transition-colors hover:text-ink-100 ${active ? 'text-ink-100' : ''}`}
+                          >
+                            {col.label}
+                            <span className={`text-[9px] ${active ? 'opacity-100' : 'opacity-0'}`} aria-hidden="true">
+                              {active && holdingSort.dir === 'asc' ? '▲' : '▼'}
+                            </span>
+                          </button>
+                        </th>
+                      )
+                    })}
                   </tr>
                 </thead>
                 <tbody>
-                  {holdings.map((h, i) => (
+                  {!holdingsLoaded && <SkeletonTableRows columns={7} rows={3} />}
+                  {visibleHoldings.map((h, i) => (
                     <tr key={`${h.source}-${h.symbol}-${i}`} className="border-b border-white/[0.06] last:border-0 hover:bg-white/[0.04] transition-colors">
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
@@ -442,6 +526,16 @@ export default function Dashboard() {
                   ))}
                 </tbody>
               </table>
+              {hiddenHoldingsCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setHoldingsExpanded((v) => !v)}
+                  aria-expanded={holdingsExpanded}
+                  className="w-full border-t border-white/10 py-3 text-xs font-medium text-ink-400 hover:text-ink-100 hover:bg-white/[0.04] transition-colors"
+                >
+                  {holdingsExpanded ? 'Weniger anzeigen ▲' : `${hiddenHoldingsCount} weitere ▼`}
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -450,38 +544,38 @@ export default function Dashboard() {
 
         {/* Trading-Statistiken — primary tier */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-3">
-          <StatModule label={`PNL (${range === 'all' ? 'All-Time' : range})`}>
+          <StatModule label={`PNL (${range === 'all' ? 'All-Time' : range})`} loading={loading}>
             <FlipValue value={fmtUsd(stats.totalPnl)} size="lg" tone={stats.totalPnl >= 0 ? 'up' : 'down'} />
           </StatModule>
-          <StatModule label="Win Rate">
+          <StatModule label="Win Rate" loading={loading}>
             <FlipValue value={`${stats.winRate.toFixed(1)}%`} size="lg" tone="amber" />
           </StatModule>
-          <StatModule label="Profit Factor">
+          <StatModule label="Profit Factor" loading={loading}>
             <FlipValue value={stats.profitFactor === Infinity ? '∞' : stats.profitFactor.toFixed(2)} size="lg" tone="amber" />
           </StatModule>
-          <StatModule label="Offene Positionen">
+          <StatModule label="Offene Positionen" loading={loading}>
             <FlipValue value={String(stats.open).padStart(2, '0')} size="lg" tone="bone" />
           </StatModule>
-          <StatModule label="Geschlossene Trades">
+          <StatModule label="Geschlossene Trades" loading={loading}>
             <FlipValue value={String(stats.closed).padStart(2, '0')} size="lg" tone="bone" />
           </StatModule>
         </div>
 
         {/* Trading-Statistiken — secondary tier */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
-          <StatModule label="Ø Gewinn">
+          <StatModule label="Ø Gewinn" loading={loading} size="md">
             <FlipValue value={fmtUsd(stats.avgWin)} size="md" tone="up" />
           </StatModule>
-          <StatModule label="Ø Verlust">
+          <StatModule label="Ø Verlust" loading={loading} size="md">
             <FlipValue value={fmtUsd(-stats.avgLoss)} size="md" tone="down" />
           </StatModule>
-          <StatModule label="Bester Trade">
+          <StatModule label="Bester Trade" loading={loading} size="md">
             <FlipValue value={fmtUsd(stats.best)} size="md" tone={stats.best >= 0 ? 'up' : 'down'} />
           </StatModule>
-          <StatModule label="Schlechtester Trade">
+          <StatModule label="Schlechtester Trade" loading={loading} size="md">
             <FlipValue value={fmtUsd(stats.worst)} size="md" tone={stats.worst >= 0 ? 'up' : 'down'} />
           </StatModule>
-          <StatModule label="Ø Haltedauer">
+          <StatModule label="Ø Haltedauer" loading={loading} size="md">
             <FlipValue value={fmtDurationMs(stats.avgDurationMs)} size="md" tone="bone" />
           </StatModule>
         </div>
@@ -491,7 +585,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-xs uppercase tracking-widest text-ink-400">Equity Curve (kumuliert)</h3>
           </div>
-          <EquityCurve points={equityPoints} />
+          {loading ? <Skeleton className="h-40 md:h-52 w-full rounded-2xl" /> : <EquityCurve points={equityPoints} />}
         </div>
 
         {/* Filters */}
@@ -500,7 +594,11 @@ export default function Dashboard() {
           <FilterSelect label="Status" value={statusFilter} onChange={(v) => setStatusFilter(v as StatusFilter)} options={[['all', 'Alle'], ['open', 'Offen'], ['closed', 'Geschlossen']]} />
           <FilterSelect label="Seite" value={sideFilter} onChange={(v) => setSideFilter(v as SideFilter)} options={[['all', 'Alle'], ['long', 'Long'], ['short', 'Short']]} />
           <FilterSelect label="Coin" value={coinFilter} onChange={setCoinFilter} options={[['all', 'Alle'], ...coins.map((c) => [c, c] as [string, string])]} />
-          <div className="ml-auto text-xs text-ink-400 tabular">{filtered.length} Trades</div>
+          {loading ? (
+            <Skeleton className="ml-auto h-3 w-14" />
+          ) : (
+            <div className="ml-auto text-xs text-ink-400 tabular">{filtered.length} Trades</div>
+          )}
         </div>
 
         {/* Trade table */}
@@ -522,6 +620,7 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
+                {loading && <SkeletonTableRows columns={10} rows={4} />}
                 {filtered.map((t) => (
                   <tr key={t.id} className="border-b border-white/[0.06] last:border-0 hover:bg-white/[0.04] transition-colors">
                     <td className="py-3 px-4 text-ink-100 font-medium">
@@ -567,7 +666,7 @@ export default function Dashboard() {
             </table>
           </div>
 
-          {filtered.length === 0 && (
+          {!loading && filtered.length === 0 && (
             <div className="py-16 text-center text-ink-400 text-sm">
               {trades.length === 0 ? 'Noch keine Trades synced. Klicke auf "Sync now".' : 'Keine Trades in diesem Filter.'}
             </div>
@@ -647,11 +746,30 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
   )
 }
 
-function StatModule({ label, children }: { label: string; children: React.ReactNode }) {
+function StatModule({
+  label,
+  loading = false,
+  size = 'lg',
+  children
+}: {
+  label: string
+  loading?: boolean
+  /** Matches the FlipValue size inside so the skeleton holds the same height. */
+  size?: 'lg' | 'md'
+  children: React.ReactNode
+}) {
   return (
     <div className="glass-panel px-4 py-4 flex flex-col gap-2">
       <span className="text-[10px] uppercase tracking-widest text-ink-400">{label}</span>
-      {children}
+      {loading ? (
+        size === 'lg' ? (
+          <Skeleton className="h-9 md:h-10 w-3/4 rounded-xl" />
+        ) : (
+          <Skeleton className="h-7 w-1/2 rounded-lg" />
+        )
+      ) : (
+        children
+      )}
     </div>
   )
 }
