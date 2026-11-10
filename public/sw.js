@@ -1,10 +1,9 @@
-const CACHE_VERSION = 'v4'
+const CACHE_VERSION = 'v5'
 const SHELL_CACHE = `shell-${CACHE_VERSION}`
 const ASSET_CACHE = `assets-${CACHE_VERSION}`
 const OFFLINE_URL = '/offline.html'
 
 const SHELL_ASSETS = [
-  '/',
   OFFLINE_URL,
   '/manifest.webmanifest',
   '/icon-192.png',
@@ -49,8 +48,11 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const copy = response.clone()
-          caches.open(SHELL_CACHE).then((cache) => cache.put(request, copy))
+          // Only cache real pages — never the auth redirect to /login.
+          if (response.ok && response.type === 'basic' && !response.redirected) {
+            const copy = response.clone()
+            caches.open(SHELL_CACHE).then((cache) => cache.put(request, copy))
+          }
           return response
         })
         .catch(async () => (await caches.match(request)) || (await caches.match(OFFLINE_URL)))
