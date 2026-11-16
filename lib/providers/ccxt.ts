@@ -20,7 +20,20 @@ function buildExchange(connection: Connection) {
   if (connection.apiSecretEnc) config.secret = decryptSecret(connection.apiSecretEnc)
   if (connection.passwordEnc) config.password = decryptSecret(connection.passwordEnc)
 
-  return new ExchangeClass(config)
+  const exchange = new ExchangeClass(config)
+
+  // ccxt races address families with a 10ms per-attempt budget (Happy Eyeballs). On networks
+  // without working IPv6, the IPv4 handshake regularly takes longer than 10ms, so every attempt
+  // aborts and requests fail with "fetch failed" (AggregateError ETIMEDOUT). Give each attempt
+  // a realistic budget instead.
+  const withDispatcher = exchange as unknown as { getDispatcherOptions: (isPlainAgent?: boolean) => Record<string, unknown> }
+  const baseDispatcherOptions = withDispatcher.getDispatcherOptions.bind(exchange)
+  withDispatcher.getDispatcherOptions = (isPlainAgent?: boolean) => ({
+    ...baseDispatcherOptions(isPlainAgent),
+    autoSelectFamilyAttemptTimeout: 250
+  })
+
+  return exchange
 }
 
 /**

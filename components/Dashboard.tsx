@@ -143,6 +143,9 @@ function AssetIcon({ symbol, assetClass }: { symbol: string; assetClass: 'crypto
   )
 }
 
+const MASK = '•••••'
+const HIDE_VALUES_KEY = 'trading-dashboard:hide-values'
+
 function fmtUsd(n: number) {
   const sign = n < 0 ? '-' : ''
   return `${sign}$${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -251,6 +254,22 @@ export default function Dashboard() {
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null)
   const [holdingSort, setHoldingSort] = useState<{ key: HoldingSortKey; dir: SortDir }>({ key: 'value', dir: 'desc' })
   const [holdingsExpanded, setHoldingsExpanded] = useState(false)
+  // Money values start censored; the eye toggle reveals them and the choice persists per device.
+  const [hideValues, setHideValues] = useState(true)
+
+  useEffect(() => {
+    if (localStorage.getItem(HIDE_VALUES_KEY) === '0') setHideValues(false)
+  }, [])
+
+  const toggleHideValues = () => {
+    setHideValues((v) => {
+      localStorage.setItem(HIDE_VALUES_KEY, v ? '0' : '1')
+      return !v
+    })
+  }
+
+  const usd = (n: number) => (hideValues ? MASK : fmtUsd(n))
+  const qty = (n: number, digits: number) => (hideValues ? MASK : n.toLocaleString('en-US', { maximumFractionDigits: digits }))
 
   const load = async () => {
     setError(null)
@@ -435,6 +454,16 @@ export default function Dashboard() {
               )}
             </div>
             <button
+              type="button"
+              onClick={toggleHideValues}
+              className="glass-pill px-3 py-2 text-ink-100"
+              aria-label={hideValues ? 'Geldwerte anzeigen' : 'Geldwerte verbergen'}
+              aria-pressed={!hideValues}
+              title={hideValues ? 'Geldwerte anzeigen' : 'Geldwerte verbergen'}
+            >
+              <EyeIcon open={!hideValues} />
+            </button>
+            <button
               onClick={syncNow}
               disabled={syncing}
               className="glass-pill glass-pill-signal px-4 py-2 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
@@ -452,16 +481,16 @@ export default function Dashboard() {
         {/* Main Statistik — shared overview across Portfolio (stocks/ETFs/crypto) and Trading */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
           <StatModule label="Gesamtvermögen" loading={!accountLoaded}>
-            <FlipValue value={accountValue != null ? fmtUsd(accountValue) : '—'} size="lg" tone="bone" />
+            <FlipValue value={accountValue != null ? usd(accountValue) : '—'} size="lg" tone="bone" />
           </StatModule>
           <StatModule label="Portfolio-Wert" loading={!accountLoaded}>
-            <FlipValue value={holdingsValue != null ? fmtUsd(holdingsValue) : '—'} size="lg" tone="bone" />
+            <FlipValue value={holdingsValue != null ? usd(holdingsValue) : '—'} size="lg" tone="bone" />
           </StatModule>
           <StatModule label="Trading PNL (All-Time)" loading={loading}>
-            <FlipValue value={fmtUsd(allTimeTradingPnl)} size="lg" tone={allTimeTradingPnl >= 0 ? 'up' : 'down'} />
+            <FlipValue value={usd(allTimeTradingPnl)} size="lg" tone={allTimeTradingPnl >= 0 ? 'up' : 'down'} />
           </StatModule>
           <StatModule label="Verfügbares Cash" loading={!accountLoaded}>
-            <FlipValue value={withdrawable != null ? fmtUsd(withdrawable) : '—'} size="lg" tone="bone" />
+            <FlipValue value={withdrawable != null ? usd(withdrawable) : '—'} size="lg" tone="bone" />
           </StatModule>
         </div>
 
@@ -516,11 +545,11 @@ export default function Dashboard() {
                       </td>
                       <td className="py-3 px-4 text-ink-400">{ASSET_CLASS_LABEL[h.assetClass]}</td>
                       <td className="py-3 px-4 text-ink-400">{h.sourceLabel}</td>
-                      <td className="py-3 px-4 tabular text-ink-400">{h.quantity.toLocaleString('en-US', { maximumFractionDigits: 6 })}</td>
+                      <td className="py-3 px-4 tabular text-ink-400">{qty(h.quantity, 6)}</td>
                       <td className="py-3 px-4 tabular text-ink-400">{h.price != null ? fmtUsd(h.price) : '—'}</td>
-                      <td className="py-3 px-4 tabular text-ink-100 font-medium">{h.value != null ? fmtUsd(h.value) : '—'}</td>
+                      <td className="py-3 px-4 tabular text-ink-100 font-medium">{h.value != null ? usd(h.value) : '—'}</td>
                       <td className={`py-3 px-4 tabular font-medium ${h.unrealizedPnl == null ? 'text-ink-400' : h.unrealizedPnl >= 0 ? 'text-up' : 'text-down'}`}>
-                        {h.unrealizedPnl != null ? fmtUsd(h.unrealizedPnl) : '—'}
+                        {h.unrealizedPnl != null ? usd(h.unrealizedPnl) : '—'}
                       </td>
                     </tr>
                   ))}
@@ -545,7 +574,7 @@ export default function Dashboard() {
         {/* Trading-Statistiken — primary tier */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-3">
           <StatModule label={`PNL (${range === 'all' ? 'All-Time' : range})`} loading={loading}>
-            <FlipValue value={fmtUsd(stats.totalPnl)} size="lg" tone={stats.totalPnl >= 0 ? 'up' : 'down'} />
+            <FlipValue value={usd(stats.totalPnl)} size="lg" tone={stats.totalPnl >= 0 ? 'up' : 'down'} />
           </StatModule>
           <StatModule label="Win Rate" loading={loading}>
             <FlipValue value={`${stats.winRate.toFixed(1)}%`} size="lg" tone="amber" />
@@ -564,16 +593,16 @@ export default function Dashboard() {
         {/* Trading-Statistiken — secondary tier */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
           <StatModule label="Ø Gewinn" loading={loading} size="md">
-            <FlipValue value={fmtUsd(stats.avgWin)} size="md" tone="up" />
+            <FlipValue value={usd(stats.avgWin)} size="md" tone="up" />
           </StatModule>
           <StatModule label="Ø Verlust" loading={loading} size="md">
-            <FlipValue value={fmtUsd(-stats.avgLoss)} size="md" tone="down" />
+            <FlipValue value={usd(-stats.avgLoss)} size="md" tone="down" />
           </StatModule>
           <StatModule label="Bester Trade" loading={loading} size="md">
-            <FlipValue value={fmtUsd(stats.best)} size="md" tone={stats.best >= 0 ? 'up' : 'down'} />
+            <FlipValue value={usd(stats.best)} size="md" tone={stats.best >= 0 ? 'up' : 'down'} />
           </StatModule>
           <StatModule label="Schlechtester Trade" loading={loading} size="md">
-            <FlipValue value={fmtUsd(stats.worst)} size="md" tone={stats.worst >= 0 ? 'up' : 'down'} />
+            <FlipValue value={usd(stats.worst)} size="md" tone={stats.worst >= 0 ? 'up' : 'down'} />
           </StatModule>
           <StatModule label="Ø Haltedauer" loading={loading} size="md">
             <FlipValue value={fmtDurationMs(stats.avgDurationMs)} size="md" tone="bone" />
@@ -635,10 +664,10 @@ export default function Dashboard() {
                       <span className={`uppercase text-xs tracking-wide ${t.side === 'long' ? 'text-up' : 'text-down'}`}>{t.side}</span>
                     </td>
                     <td className="py-3 px-4 tabular text-ink-400">{t.entryPrice.toLocaleString('en-US', { maximumFractionDigits: 4 })}</td>
-                    <td className="py-3 px-4 tabular text-ink-400">{t.margin != null ? fmtUsd(t.margin) : '—'}</td>
-                    <td className="py-3 px-4 tabular text-ink-400">{t.size.toLocaleString('en-US', { maximumFractionDigits: 4 })}</td>
+                    <td className="py-3 px-4 tabular text-ink-400">{t.margin != null ? usd(t.margin) : '—'}</td>
+                    <td className="py-3 px-4 tabular text-ink-400">{qty(t.size, 4)}</td>
                     <td className={`py-3 px-4 tabular font-medium ${t.pnl >= 0 ? 'text-up' : 'text-down'}`}>
-                      {fmtUsd(t.pnl)}
+                      {usd(t.pnl)}
                       {pnlPct(t) != null && <span className="ml-1.5 text-xs font-normal opacity-70">({fmtPct(pnlPct(t)!)})</span>}
                       {liquidationRisk(t) && (
                         <span
@@ -649,7 +678,7 @@ export default function Dashboard() {
                         </span>
                       )}
                     </td>
-                    <td className="py-3 px-4 tabular text-ink-400">{t.fundingFee != null ? fmtUsd(t.fundingFee) : '—'}</td>
+                    <td className="py-3 px-4 tabular text-ink-400">{t.fundingFee != null ? usd(t.fundingFee) : '—'}</td>
                     <td className="py-3 px-4 tabular text-ink-400">{fmtDate(t.openedAt)}</td>
                     <td className="py-3 px-4">
                       <button
@@ -674,12 +703,22 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {selectedTrade && <TradeDetailModal trade={selectedTrade} onClose={() => setSelectedTrade(null)} />}
+      {selectedTrade && <TradeDetailModal trade={selectedTrade} usd={usd} qty={qty} onClose={() => setSelectedTrade(null)} />}
     </div>
   )
 }
 
-function TradeDetailModal({ trade: t, onClose }: { trade: Trade; onClose: () => void }) {
+function TradeDetailModal({
+  trade: t,
+  usd,
+  qty,
+  onClose
+}: {
+  trade: Trade
+  usd: (n: number) => string
+  qty: (n: number, digits: number) => string
+  onClose: () => void
+}) {
   const roe = pnlPct(t)
   const risk = liquidationRisk(t)
   const rows: [string, React.ReactNode][] = [
@@ -692,16 +731,16 @@ function TradeDetailModal({ trade: t, onClose }: { trade: Trade; onClose: () => 
     ['Exit-Preis', t.exitPrice != null ? t.exitPrice.toLocaleString('en-US', { maximumFractionDigits: 4 }) : '—'],
     ['Mark-Preis', t.markPrice != null ? t.markPrice.toLocaleString('en-US', { maximumFractionDigits: 4 }) : '—'],
     ['Liquidationspreis', t.liquidationPrice != null ? t.liquidationPrice.toLocaleString('en-US', { maximumFractionDigits: 4 }) : '—'],
-    ['Size', t.size.toLocaleString('en-US', { maximumFractionDigits: 6 })],
-    ['Notional', fmtUsd(t.notional)],
-    ['Margin (Isolated)', t.margin != null ? fmtUsd(t.margin) : '—'],
-    ['PnL (live/unrealisiert)', <span className={t.pnl >= 0 ? 'text-up' : 'text-down'}>{fmtUsd(t.pnl)}</span>],
+    ['Size', qty(t.size, 6)],
+    ['Notional', usd(t.notional)],
+    ['Margin (Isolated)', t.margin != null ? usd(t.margin) : '—'],
+    ['PnL (live/unrealisiert)', <span className={t.pnl >= 0 ? 'text-up' : 'text-down'}>{usd(t.pnl)}</span>],
     ...(t.realizedPnl != null
-      ? ([['Bereits realisiert', <span className={t.realizedPnl >= 0 ? 'text-up' : 'text-down'}>{fmtUsd(t.realizedPnl)}</span>]] as [string, React.ReactNode][])
+      ? ([['Bereits realisiert', <span className={t.realizedPnl >= 0 ? 'text-up' : 'text-down'}>{usd(t.realizedPnl)}</span>]] as [string, React.ReactNode][])
       : []),
     ['ROE', roe != null ? <span className={roe >= 0 ? 'text-up' : 'text-down'}>{fmtPct(roe)}</span> : '—'],
-    ['Funding', t.fundingFee != null ? fmtUsd(t.fundingFee) : '—'],
-    ['Gebühren', fmtUsd(t.fee)],
+    ['Funding', t.fundingFee != null ? usd(t.fundingFee) : '—'],
+    ['Gebühren', usd(t.fee)],
     ['Fills', String(t.fillsCount)],
     ['Geöffnet', fmtDate(t.openedAt)],
     ['Geschlossen', fmtDate(t.closedAt)]
@@ -734,6 +773,16 @@ function TradeDetailModal({ trade: t, onClose }: { trade: Trade; onClose: () => 
         </dl>
       </div>
     </div>
+  )
+}
+
+function EyeIcon({ open }: { open: boolean }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+      <circle cx="12" cy="12" r="3" />
+      {!open && <line x1="3" y1="3" x2="21" y2="21" />}
+    </svg>
   )
 }
 
