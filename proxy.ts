@@ -21,6 +21,6 @@ export function proxy(request: NextRequest) {
 export const config = {
   // Pages only: skip API routes, Next internals and public static files.
   matcher: [
-    '/((?!api/|_next/|sw\\.js|offline\\.html|manifest\\.webmanifest|favicon|apple-touch-icon|icon-).*)'
+    '/((?!api/|_next/|sw\\.js|offline\\.html|manifest\\.webmanifest|favicon|apple-touch-icon|icon[-.]).*)'
   ]
 }
