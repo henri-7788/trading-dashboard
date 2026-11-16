@@ -7,7 +7,7 @@ interface FlipValueProps {
 }
 
 const sizeClasses: Record<string, string> = {
-  lg: 'text-3xl md:text-4xl',
+  lg: 'text-[1.375rem] leading-tight sm:text-3xl md:text-4xl',
   md: 'text-lg',
   sm: 'text-sm'
 }

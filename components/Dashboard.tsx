@@ -119,13 +119,23 @@ function iconSourcesFor(symbol: string, assetClass: 'crypto' | 'stock' | 'etf' |
   return []
 }
 
-function AssetIcon({ symbol, assetClass }: { symbol: string; assetClass: 'crypto' | 'stock' | 'etf' | 'other' }) {
+function AssetIcon({
+  symbol,
+  assetClass,
+  size = 'sm'
+}: {
+  symbol: string
+  assetClass: 'crypto' | 'stock' | 'etf' | 'other'
+  /** sm for dense desktop tables, lg for the phone list rows. */
+  size?: 'sm' | 'lg'
+}) {
   const sources = iconSourcesFor(symbol, assetClass)
   const [srcIndex, setSrcIndex] = useState(0)
+  const box = size === 'lg' ? 'h-8 w-8' : 'h-5 w-5'
 
   if (srcIndex >= sources.length) {
     return (
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-[9px] font-semibold text-ink-400">
+      <span className={`flex ${box} shrink-0 items-center justify-center rounded-full bg-white/10 ${size === 'lg' ? 'text-xs' : 'text-[9px]'} font-semibold text-ink-400`}>
         {symbol.slice(0, 1)}
       </span>
     )
@@ -136,7 +146,7 @@ function AssetIcon({ symbol, assetClass }: { symbol: string; assetClass: 'crypto
       key={sources[srcIndex]}
       src={sources[srcIndex]}
       alt=""
-      className="h-5 w-5 shrink-0 rounded-full"
+      className={`${box} shrink-0 rounded-full`}
       loading="lazy"
       onError={() => setSrcIndex((i) => i + 1)}
     />
@@ -432,54 +442,63 @@ export default function Dashboard() {
           FIRST VIEWPORT: ambient background, glass control bar, shared Main Statistik row as glass stat cards.
           FORM: user-pinned direction — Liquid Glass (Apple-native frosted-material register), replacing the prior trading-terminal identity by explicit request.
           FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md. */}
-      <div className="max-w-6xl mx-auto px-4 md:px-6 pt-8">
-        <header className="glass-panel px-5 py-4 mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-base font-semibold text-ink-100">Trading Dashboard</h1>
-            {accountLoaded ? (
-              <p className="text-xs text-ink-400 mt-1">
-                {connectionLabels.length > 0 ? connectionLabels.join(' · ') : 'Keine Verbindung konfiguriert'}
-              </p>
-            ) : (
-              <Skeleton className="h-3 w-40 mt-2" />
-            )}
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 pt-[max(0.75rem,env(safe-area-inset-top))] md:pt-8">
+        {/* Phones: title row with the two icon controls in thumb reach, then a sync row underneath.
+            md+: everything on one line as before. */}
+        <header className="glass-panel px-4 py-3.5 md:px-5 md:py-4 mb-4 md:mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="text-base font-semibold text-ink-100">Trading Dashboard</h1>
+              {accountLoaded ? (
+                <p className="text-xs text-ink-400 mt-1 truncate">
+                  {connectionLabels.length > 0 ? connectionLabels.join(' · ') : 'Keine Verbindung konfiguriert'}
+                </p>
+              ) : (
+                <Skeleton className="h-3 w-40 mt-2" />
+              )}
+            </div>
+            <div className="flex items-center gap-2 md:hidden">
+              <EyeToggle hideValues={hideValues} onToggle={toggleHideValues} />
+              <Link href="/settings" className="glass-pill h-11 w-11 text-ink-100" aria-label="Einstellungen" title="Einstellungen">
+                <GearIcon />
+              </Link>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <div className="text-[10px] uppercase tracking-widest text-ink-400">Zuletzt synced</div>
+          <div className="flex items-center justify-between gap-3 border-t border-white/[0.08] pt-3 md:border-0 md:pt-0 md:justify-end">
+            <div className="md:text-right">
+              <div className="text-[10px] uppercase tracking-widest text-ink-400 whitespace-nowrap">Zuletzt synced</div>
               {loading ? (
-                <Skeleton className="h-3 w-24 mt-1 ml-auto" />
+                <Skeleton className="h-3 w-24 mt-1 md:ml-auto" />
               ) : (
                 <div className="text-xs text-ink-100 tabular">{lastSyncedAt ? fmtDate(lastSyncedAt) : 'nie'}</div>
               )}
             </div>
-            <button
-              type="button"
-              onClick={toggleHideValues}
-              className="glass-pill px-3 py-2 text-ink-100"
-              aria-label={hideValues ? 'Geldwerte anzeigen' : 'Geldwerte verbergen'}
-              aria-pressed={!hideValues}
-              title={hideValues ? 'Geldwerte anzeigen' : 'Geldwerte verbergen'}
-            >
-              <EyeIcon open={!hideValues} />
-            </button>
-            <button
-              onClick={syncNow}
-              disabled={syncing}
-              className="glass-pill glass-pill-signal px-4 py-2 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {syncing ? 'Syncing…' : 'Sync now'}
-            </button>
-            <Link href="/settings" className="glass-pill px-4 py-2 text-xs font-medium" aria-label="Einstellungen">
-              Einstellungen
-            </Link>
+            <div className="flex items-center gap-3">
+              <span className="hidden md:inline-flex">
+                <EyeToggle hideValues={hideValues} onToggle={toggleHideValues} />
+              </span>
+              <button
+                onClick={syncNow}
+                disabled={syncing}
+                className="glass-pill glass-pill-signal h-11 px-5 md:h-auto md:px-4 md:py-2 text-sm md:text-xs font-medium whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <SyncIcon spinning={syncing} />
+                {syncing ? 'Syncing…' : 'Sync now'}
+              </button>
+              {/* Wrapper carries the visibility: .glass-pill's own display would override `hidden`. */}
+              <span className="hidden md:inline-flex">
+                <Link href="/settings" className="glass-pill px-4 py-2 text-xs font-medium">
+                  Einstellungen
+                </Link>
+              </span>
+            </div>
           </div>
         </header>
 
         {error && <div className="glass-panel-tight mb-6 px-4 py-3 text-sm text-down border-down/25">{error}</div>}
 
         {/* Main Statistik — shared overview across Portfolio (stocks/ETFs/crypto) and Trading */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 md:gap-3 mb-6">
           <StatModule label="Gesamtvermögen" loading={!accountLoaded}>
             <FlipValue value={accountValue != null ? usd(accountValue) : '—'} size="lg" tone="bone" />
           </StatModule>
@@ -497,13 +516,83 @@ export default function Dashboard() {
         <SectionHeader>Portfolio</SectionHeader>
 
         {/* Holdings */}
-        <div className="glass-panel overflow-hidden mb-10">
+        <div className="glass-panel overflow-hidden mb-8 md:mb-10">
           {holdingsLoaded && holdings.length === 0 ? (
             <div className="py-12 text-center text-ink-400 text-sm">
               Keine gehaltenen Positionen. Kryptos werden beim Sync erfasst, Aktien/ETFs unter Einstellungen manuell.
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            {/* Phones: one row per holding — what it is on the left, what it's worth and how it's doing on the right. */}
+            <div className="md:hidden">
+              <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-white/10">
+                <span className="text-[10px] uppercase tracking-widest text-ink-400">Sortieren</span>
+                <div className="flex items-center gap-1.5">
+                  <select
+                    value={holdingSort.key}
+                    onChange={(e) => {
+                      const col = HOLDING_COLUMNS.find((c) => c.key === e.target.value)!
+                      setHoldingSort({ key: col.key, dir: col.numeric ? 'desc' : 'asc' })
+                    }}
+                    aria-label="Sortieren nach"
+                    className="h-9 bg-transparent text-ink-100 text-right focus:outline-none"
+                  >
+                    {HOLDING_COLUMNS.map((c) => (
+                      <option key={c.key} value={c.key} className="bg-ink-900">
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setHoldingSort((cur) => ({ ...cur, dir: cur.dir === 'asc' ? 'desc' : 'asc' }))}
+                    className="glass-pill h-9 w-9 text-ink-300"
+                    aria-label={holdingSort.dir === 'asc' ? 'Aufsteigend — umkehren' : 'Absteigend — umkehren'}
+                  >
+                    <ChevronIcon up={holdingSort.dir === 'asc'} />
+                  </button>
+                </div>
+              </div>
+              <ul>
+                {!holdingsLoaded &&
+                  Array.from({ length: 3 }, (_, i) => (
+                    <li key={i} className="flex items-center justify-between gap-3 px-4 py-3.5 border-b border-white/[0.06] last:border-0">
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="h-8 w-8 shrink-0" />
+                        <div className="flex flex-col gap-1.5">
+                          <Skeleton className="h-3.5 w-24" />
+                          <Skeleton className="h-3 w-16" />
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1.5">
+                        <Skeleton className="h-3.5 w-20" />
+                        <Skeleton className="h-3 w-14" />
+                      </div>
+                    </li>
+                  ))}
+                {visibleHoldings.map((h, i) => (
+                  <li key={`${h.source}-${h.symbol}-${i}`} className="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/[0.06] last:border-0">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <AssetIcon symbol={h.symbol} assetClass={h.assetClass} size="lg" />
+                      <div className="min-w-0">
+                        <div className="text-sm text-ink-100 font-medium truncate">{h.name && h.name !== h.symbol ? h.name : h.symbol}</div>
+                        <div className="text-xs text-ink-400 mt-0.5 truncate tabular">
+                          {qty(h.quantity, 6)} {h.symbol} · {h.sourceLabel}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-sm text-ink-100 font-medium tabular">{h.value != null ? usd(h.value) : '—'}</div>
+                      <div className={`text-xs tabular mt-0.5 ${h.unrealizedPnl == null ? 'text-ink-400' : h.unrealizedPnl >= 0 ? 'text-up' : 'text-down'}`}>
+                        {h.unrealizedPnl != null ? usd(h.unrealizedPnl) : h.price != null ? fmtUsd(h.price) : '—'}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-[10px] uppercase tracking-widest text-ink-400 border-b border-white/10">
@@ -555,25 +644,26 @@ export default function Dashboard() {
                   ))}
                 </tbody>
               </table>
+            </div>
               {hiddenHoldingsCount > 0 && (
                 <button
                   type="button"
                   onClick={() => setHoldingsExpanded((v) => !v)}
                   aria-expanded={holdingsExpanded}
-                  className="w-full border-t border-white/10 py-3 text-xs font-medium text-ink-400 hover:text-ink-100 hover:bg-white/[0.04] transition-colors"
+                  className="w-full border-t border-white/10 py-3.5 md:py-3 text-xs font-medium text-ink-400 hover:text-ink-100 hover:bg-white/[0.04] active:bg-white/[0.06] transition-colors"
                 >
                   {holdingsExpanded ? 'Weniger anzeigen ▲' : `${hiddenHoldingsCount} weitere ▼`}
                 </button>
               )}
-            </div>
+            </>
           )}
         </div>
 
         <SectionHeader>Trading</SectionHeader>
 
         {/* Trading-Statistiken — primary tier */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-3">
-          <StatModule label={`PNL (${range === 'all' ? 'All-Time' : range})`} loading={loading}>
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 md:gap-3 mb-2.5 md:mb-3">
+          <StatModule label={`PNL (${range === 'all' ? 'All-Time' : range})`} loading={loading} className="col-span-2 lg:col-span-1">
             <FlipValue value={usd(stats.totalPnl)} size="lg" tone={stats.totalPnl >= 0 ? 'up' : 'down'} />
           </StatModule>
           <StatModule label="Win Rate" loading={loading}>
@@ -591,7 +681,7 @@ export default function Dashboard() {
         </div>
 
         {/* Trading-Statistiken — secondary tier */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 md:gap-3 mb-6">
           <StatModule label="Ø Gewinn" loading={loading} size="md">
             <FlipValue value={usd(stats.avgWin)} size="md" tone="up" />
           </StatModule>
@@ -604,7 +694,7 @@ export default function Dashboard() {
           <StatModule label="Schlechtester Trade" loading={loading} size="md">
             <FlipValue value={usd(stats.worst)} size="md" tone={stats.worst >= 0 ? 'up' : 'down'} />
           </StatModule>
-          <StatModule label="Ø Haltedauer" loading={loading} size="md">
+          <StatModule label="Ø Haltedauer" loading={loading} size="md" className="col-span-2 lg:col-span-1">
             <FlipValue value={fmtDurationMs(stats.avgDurationMs)} size="md" tone="bone" />
           </StatModule>
         </div>
@@ -618,21 +708,88 @@ export default function Dashboard() {
         </div>
 
         {/* Filters */}
-        <div className="glass-panel p-4 mb-4 flex flex-wrap gap-3 items-center">
+        <div className="glass-panel p-3.5 md:p-4 mb-3 md:mb-4 grid grid-cols-2 gap-x-3 gap-y-2.5 md:flex md:flex-wrap md:gap-3 md:items-center">
           <FilterSelect label="Zeitraum" value={range} onChange={(v) => setRange(v as Range)} options={[['all', 'All-Time'], ['30d', '30 Tage'], ['7d', '7 Tage'], ['24h', '24h']]} />
           <FilterSelect label="Status" value={statusFilter} onChange={(v) => setStatusFilter(v as StatusFilter)} options={[['all', 'Alle'], ['open', 'Offen'], ['closed', 'Geschlossen']]} />
           <FilterSelect label="Seite" value={sideFilter} onChange={(v) => setSideFilter(v as SideFilter)} options={[['all', 'Alle'], ['long', 'Long'], ['short', 'Short']]} />
           <FilterSelect label="Coin" value={coinFilter} onChange={setCoinFilter} options={[['all', 'Alle'], ...coins.map((c) => [c, c] as [string, string])]} />
           {loading ? (
-            <Skeleton className="ml-auto h-3 w-14" />
+            <Skeleton className="hidden md:block ml-auto h-3 w-14" />
           ) : (
-            <div className="ml-auto text-xs text-ink-400 tabular">{filtered.length} Trades</div>
+            <div className="hidden md:block ml-auto text-xs text-ink-400 tabular">{filtered.length} Trades</div>
           )}
         </div>
 
         {/* Trade table */}
         <div className="glass-panel overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Phones: each trade is one tappable row — coin, side and leverage left, PnL right; tap opens the detail sheet. */}
+          <div className="md:hidden">
+            {!loading && filtered.length > 0 && (
+              <div className="px-4 py-2.5 border-b border-white/10 text-[10px] uppercase tracking-widest text-ink-400 tabular">{filtered.length} Trades</div>
+            )}
+            <ul>
+              {loading &&
+                Array.from({ length: 3 }, (_, i) => (
+                  <li key={i} className="flex items-center justify-between gap-3 px-4 py-3.5 border-b border-white/[0.06] last:border-0">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-8 w-8 shrink-0" />
+                      <div className="flex flex-col gap-1.5">
+                        <Skeleton className="h-3.5 w-24" />
+                        <Skeleton className="h-3 w-32" />
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1.5">
+                      <Skeleton className="h-3.5 w-20" />
+                      <Skeleton className="h-3 w-12" />
+                    </div>
+                  </li>
+                ))}
+              {filtered.map((t) => {
+                const pct = pnlPct(t)
+                const risk = liquidationRisk(t)
+                return (
+                  <li key={t.id} className="border-b border-white/[0.06] last:border-0">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTrade(t)}
+                      className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left active:bg-white/[0.06] transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <AssetIcon symbol={t.coin} assetClass="crypto" size="lg" />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 text-sm">
+                            <span className="text-ink-100 font-medium">{t.coin}</span>
+                            <span className={`text-[10px] uppercase tracking-wide font-medium ${t.side === 'long' ? 'text-up' : 'text-down'}`}>
+                              {t.side}
+                              {t.leverage != null && ` ${t.leverage}x`}
+                            </span>
+                            {t.status === 'open' && <span className="h-1.5 w-1.5 rounded-full bg-signal" aria-label="Offen" />}
+                          </div>
+                          <div className="text-xs text-ink-400 mt-0.5 truncate tabular">
+                            {t.connectionLabel ? `${t.connectionLabel} · ` : ''}
+                            {fmtDate(t.openedAt)}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className={`text-sm font-medium tabular ${t.pnl >= 0 ? 'text-up' : 'text-down'}`}>{usd(t.pnl)}</div>
+                        <div className="flex items-center justify-end gap-1 text-xs tabular mt-0.5">
+                          {risk && (
+                            <span className={LIQUIDATION_RISK_STYLE[risk]} aria-label={LIQUIDATION_RISK_LABEL[risk]}>
+                              ⚠
+                            </span>
+                          )}
+                          <span className={pct == null ? 'text-ink-400' : pct >= 0 ? 'text-up/80' : 'text-down/80'}>{pct != null ? fmtPct(pct) : '—'}</span>
+                        </div>
+                      </div>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-[10px] uppercase tracking-widest text-ink-400 border-b border-white/10">
@@ -747,10 +904,20 @@ function TradeDetailModal({
   ]
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="glass-panel w-full max-w-md max-h-[85vh] overflow-y-auto p-5" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-4 bg-black/60 backdrop-blur-sm"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Trade-Details ${t.coin}`}
+    >
+      <div
+        className="glass-panel animate-sheet-up w-full md:max-w-md max-h-[88dvh] md:max-h-[85vh] overflow-y-auto overscroll-contain !rounded-b-none md:!rounded-3xl !bg-ink-900/85 md:!bg-white/[0.06] px-5 pt-2 md:pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] md:pb-5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="md:hidden mx-auto mb-2 h-1 w-10 rounded-full bg-white/25" aria-hidden="true" />
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
             <AssetIcon symbol={t.coin} assetClass="crypto" />
             <h3 className="text-ink-100 font-medium">{t.coin}</h3>
             {risk && (
@@ -759,13 +926,18 @@ function TradeDetailModal({
               </span>
             )}
           </div>
-          <button type="button" onClick={onClose} className="text-ink-400 hover:text-ink-100 transition-colors text-sm">
-            ✕
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Schließen"
+            className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-400 hover:text-ink-100 active:bg-white/[0.08] transition-colors"
+          >
+            <CloseIcon />
           </button>
         </div>
         <dl className="text-sm divide-y divide-white/[0.06]">
           {rows.map(([label, value]) => (
-            <div key={label} className="flex items-center justify-between py-2 gap-4">
+            <div key={label} className="flex items-center justify-between py-2.5 md:py-2 gap-4">
               <dt className="text-ink-400">{label}</dt>
               <dd className="tabular text-ink-100 text-right">{value}</dd>
             </div>
@@ -773,6 +945,71 @@ function TradeDetailModal({
         </dl>
       </div>
     </div>
+  )
+}
+
+function EyeToggle({ hideValues, onToggle }: { hideValues: boolean; onToggle: () => void }) {
+  const label = hideValues ? 'Geldwerte anzeigen' : 'Geldwerte verbergen'
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="glass-pill h-11 w-11 md:h-auto md:w-auto md:px-3 md:py-2 text-ink-100"
+      aria-label={label}
+      aria-pressed={!hideValues}
+      title={label}
+    >
+      <EyeIcon open={!hideValues} />
+    </button>
+  )
+}
+
+const ICON_PROPS = {
+  width: 16,
+  height: 16,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 2,
+  strokeLinecap: 'round' as const,
+  strokeLinejoin: 'round' as const,
+  'aria-hidden': true
+}
+
+function GearIcon() {
+  return (
+    <svg {...ICON_PROPS}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+  )
+}
+
+function SyncIcon({ spinning }: { spinning: boolean }) {
+  return (
+    <svg {...ICON_PROPS} width={14} height={14} className={`md:hidden ${spinning ? 'animate-spin' : ''}`}>
+      <path d="M21 12a9 9 0 0 1-15.36 6.36L3 16" />
+      <path d="M3 12a9 9 0 0 1 15.36-6.36L21 8" />
+      <path d="M21 3v5h-5" />
+      <path d="M3 21v-5h5" />
+    </svg>
+  )
+}
+
+function ChevronIcon({ up }: { up: boolean }) {
+  return (
+    <svg {...ICON_PROPS} width={14} height={14} className={`transition-transform ${up ? 'rotate-180' : ''}`}>
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  )
+}
+
+function CloseIcon() {
+  return (
+    <svg {...ICON_PROPS} width={18} height={18}>
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </svg>
   )
 }
 
@@ -799,20 +1036,22 @@ function StatModule({
   label,
   loading = false,
   size = 'lg',
+  className = '',
   children
 }: {
   label: string
   loading?: boolean
+  className?: string
   /** Matches the FlipValue size inside so the skeleton holds the same height. */
   size?: 'lg' | 'md'
   children: React.ReactNode
 }) {
   return (
-    <div className="glass-panel px-4 py-4 flex flex-col gap-2">
-      <span className="text-[10px] uppercase tracking-widest text-ink-400">{label}</span>
+    <div className={`glass-panel min-w-0 px-3.5 py-3.5 md:px-4 md:py-4 flex flex-col gap-1.5 md:gap-2 ${className}`}>
+      <span className="text-[10px] uppercase tracking-wider md:tracking-widest text-ink-400 truncate">{label}</span>
       {loading ? (
         size === 'lg' ? (
-          <Skeleton className="h-9 md:h-10 w-3/4 rounded-xl" />
+          <Skeleton className="h-7 sm:h-9 md:h-10 w-3/4 rounded-xl" />
         ) : (
           <Skeleton className="h-7 w-1/2 rounded-lg" />
         )
@@ -835,12 +1074,12 @@ function FilterSelect({
   options: [string, string][]
 }) {
   return (
-    <label className="flex items-center gap-2 text-xs text-ink-400">
-      <span className="uppercase tracking-widest">{label}</span>
+    <label className="flex min-w-0 flex-col gap-1 text-xs text-ink-400 md:flex-row md:items-center md:gap-2">
+      <span className="uppercase tracking-widest text-[10px] md:text-xs">{label}</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="bg-white/[0.05] border border-white/[0.12] rounded-full px-3 py-1.5 text-ink-100 focus:outline-none focus:border-signal/50"
+        className="h-11 w-full md:h-auto md:w-auto bg-white/[0.05] border border-white/[0.12] rounded-full px-3.5 md:px-3 md:py-1.5 text-ink-100 focus:outline-none focus:border-signal/50"
       >
         {options.map(([v, l]) => (
           <option key={v} value={v} className="bg-ink-900">

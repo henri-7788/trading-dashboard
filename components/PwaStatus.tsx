@@ -15,7 +15,14 @@ export default function PwaStatus() {
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch((err) => console.error('sw registration failed', err))
+      if (process.env.NODE_ENV === 'production') {
+        navigator.serviceWorker.register('/sw.js').catch((err) => console.error('sw registration failed', err))
+      } else {
+        // Dev chunks keep the same URL across edits, so the worker's cache-first asset strategy would
+        // serve stale JS and cause hydration mismatches. Remove any worker left over from a prod run.
+        navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((r) => r.unregister()))
+        caches?.keys().then((keys) => keys.forEach((k) => caches.delete(k)))
+      }
     }
 
     setOffline(!navigator.onLine)
@@ -63,23 +70,23 @@ export default function PwaStatus() {
   return (
     <>
       {offline && (
-        <div className="fixed top-3 inset-x-0 z-50 flex justify-center px-4">
+        <div className="fixed top-[max(0.75rem,env(safe-area-inset-top))] inset-x-0 z-50 flex justify-center px-4">
           <div className="glass-pill glass-pill-down px-4 py-1.5 text-xs uppercase tracking-widest">Keine Verbindung — zuletzt geladene Daten</div>
         </div>
       )}
 
       {!installed && installPrompt && (
-        <div className="glass-panel fixed bottom-4 inset-x-4 md:inset-x-auto md:right-4 md:w-80 z-50 px-4 py-3 flex items-center gap-3">
+        <div className="glass-panel !fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] inset-x-3 md:inset-x-auto md:bottom-4 md:right-4 md:w-80 z-50 !bg-ink-900/80 px-4 py-3.5 md:py-3 flex flex-col gap-3 md:flex-row md:items-center">
           <div className="flex-1 min-w-0">
             <div className="text-xs uppercase tracking-widest text-ink-100">App installieren</div>
             <div className="text-xs text-ink-400 mt-0.5">Als App auf dem Homescreen ablegen — schneller Start, eigenes Fenster.</div>
           </div>
-          <div className="flex flex-col gap-1.5 shrink-0">
-            <button onClick={install} className="glass-pill glass-pill-signal px-3 py-1.5 text-[10px] uppercase tracking-widest">
-              Installieren
-            </button>
-            <button onClick={dismissInstall} className="glass-pill px-3 py-1.5 text-[10px] uppercase tracking-widest text-ink-400">
+          <div className="grid grid-cols-2 gap-2 md:flex md:flex-col md:gap-1.5 shrink-0">
+            <button onClick={dismissInstall} className="glass-pill h-11 md:h-auto px-3 md:py-1.5 text-xs md:text-[10px] md:uppercase md:tracking-widest text-ink-400 md:order-2">
               Nicht jetzt
+            </button>
+            <button onClick={install} className="glass-pill glass-pill-signal h-11 md:h-auto px-3 md:py-1.5 text-xs md:text-[10px] font-medium md:font-normal md:uppercase md:tracking-widest md:order-1">
+              Installieren
             </button>
           </div>
         </div>

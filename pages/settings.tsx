@@ -144,13 +144,13 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <div className="min-h-screen pb-16" aria-busy="true" aria-label="Lade Einstellungen">
-        <div className="max-w-3xl mx-auto px-4 md:px-6 pt-8">
-          <header className="glass-panel px-5 py-4 mb-6 flex items-center justify-between gap-4">
-            <div>
+        <div className="max-w-3xl mx-auto px-3 sm:px-4 md:px-6 pt-[max(0.75rem,env(safe-area-inset-top))] md:pt-8">
+          <header className="glass-panel px-4 py-3.5 md:px-5 md:py-4 mb-5 md:mb-6 flex items-center justify-between gap-3 md:gap-4">
+            <div className="min-w-0">
               <h1 className="text-base font-semibold text-ink-100">Einstellungen</h1>
               <p className="text-xs text-ink-400 mt-1">Verbindungen &amp; manuelle Positionen</p>
             </div>
-            <Link href="/" className="glass-pill px-4 py-2 text-xs font-medium">
+            <Link href="/" className="glass-pill shrink-0 whitespace-nowrap h-11 md:h-auto px-4 md:py-2 text-sm md:text-xs font-medium">
               ← Dashboard
             </Link>
           </header>
@@ -177,13 +177,13 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen pb-16">
-      <div className="max-w-3xl mx-auto px-4 md:px-6 pt-8">
-        <header className="glass-panel px-5 py-4 mb-6 flex items-center justify-between gap-4">
-          <div>
+      <div className="max-w-3xl mx-auto px-3 sm:px-4 md:px-6 pt-[max(0.75rem,env(safe-area-inset-top))] md:pt-8">
+        <header className="glass-panel px-4 py-3.5 md:px-5 md:py-4 mb-5 md:mb-6 flex items-center justify-between gap-3 md:gap-4">
+          <div className="min-w-0">
             <h1 className="text-base font-semibold text-ink-100">Einstellungen</h1>
             <p className="text-xs text-ink-400 mt-1">Verbindungen &amp; manuelle Positionen</p>
           </div>
-          <Link href="/" className="glass-pill px-4 py-2 text-xs font-medium">
+          <Link href="/" className="glass-pill shrink-0 whitespace-nowrap h-11 md:h-auto px-4 md:py-2 text-sm md:text-xs font-medium">
             ← Dashboard
           </Link>
         </header>
@@ -226,7 +226,7 @@ export default function SettingsPage() {
                 <button
                   onClick={() => removeConnection(c.id, c.label)}
                   disabled={busy}
-                  className="glass-pill glass-pill-down shrink-0 px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+                  className="glass-pill glass-pill-down shrink-0 h-10 md:h-auto px-3.5 md:px-3 md:py-1.5 text-xs font-medium disabled:opacity-50"
                 >
                   Entfernen
                 </button>
@@ -234,16 +234,16 @@ export default function SettingsPage() {
             ))}
           </div>
 
-          <div className="flex gap-2 flex-wrap">
+          <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap">
             <button
               onClick={() => setShowAddConnection(showAddConnection === 'hyperliquid' ? null : 'hyperliquid')}
-              className="glass-pill glass-pill-signal px-4 py-2 text-xs font-medium"
+              className="glass-pill glass-pill-signal h-11 md:h-auto px-4 md:py-2 text-xs font-medium"
             >
               + Hyperliquid Wallet
             </button>
             <button
               onClick={() => setShowAddConnection(showAddConnection === 'ccxt' ? null : 'ccxt')}
-              className="glass-pill glass-pill-signal px-4 py-2 text-xs font-medium"
+              className="glass-pill glass-pill-signal h-11 md:h-auto px-4 md:py-2 text-xs font-medium"
             >
               + Börse (API-Key)
             </button>
@@ -284,7 +284,42 @@ export default function SettingsPage() {
             {transactions.filter((t) => t.editable).length === 0 ? (
               <div className="py-10 text-center text-ink-400 text-sm">Noch keine manuellen Käufe/Verkäufe erfasst.</div>
             ) : (
-              <div className="overflow-x-auto">
+              <>
+              {/* Phones: symbol + side/date left, quantity × price right, delete as its own tap target. */}
+              <ul className="md:hidden">
+                {transactions
+                  .filter((t) => t.editable)
+                  .map((t) => (
+                    <li key={t.id} className="flex items-center gap-3 pl-4 pr-1.5 py-2.5 border-b border-white/[0.06] last:border-0">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm text-ink-100 font-medium truncate">{t.symbol}</div>
+                        <div className="text-xs mt-0.5 truncate">
+                          <span className={`uppercase tracking-wide ${t.side === 'buy' ? 'text-up' : 'text-down'}`}>{t.side === 'buy' ? 'Kauf' : 'Verkauf'}</span>
+                          <span className="text-ink-400">
+                            {' · '}
+                            {ASSET_CLASS_LABEL[t.assetClass]} · {new Date(t.executedAt).toLocaleDateString('de-DE')}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0 tabular">
+                        <div className="text-sm text-ink-100">{t.quantity}</div>
+                        <div className="text-xs text-ink-400 mt-0.5">à {t.price.toLocaleString('en-US', { maximumFractionDigits: 4 })}</div>
+                      </div>
+                      <button
+                        onClick={() => removeTransaction(t.id)}
+                        aria-label={`${t.symbol} löschen`}
+                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-down/70 hover:text-down active:bg-down/10 transition-colors"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M3 6h18" />
+                          <path d="M8 6V4h8v2" />
+                          <path d="M19 6l-1 14H6L5 6" />
+                        </svg>
+                      </button>
+                    </li>
+                  ))}
+              </ul>
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-[10px] uppercase tracking-widest text-ink-400 border-b border-white/10">
@@ -322,17 +357,18 @@ export default function SettingsPage() {
                   </tbody>
                 </table>
               </div>
+              </>
             )}
           </div>
 
-          <div className="flex gap-2 flex-wrap items-center">
+          <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap md:items-center">
             <button
               onClick={() => setShowAddPosition((v) => !v)}
-              className="glass-pill glass-pill-signal px-4 py-2 text-xs font-medium"
+              className="glass-pill glass-pill-signal h-11 md:h-auto px-4 md:py-2 text-xs font-medium"
             >
               + Position erfassen
             </button>
-            <label className="glass-pill glass-pill-signal px-4 py-2 text-xs font-medium cursor-pointer">
+            <label className="glass-pill glass-pill-signal h-11 md:h-auto px-4 md:py-2 text-xs font-medium cursor-pointer text-center">
               {importing ? 'Importiere…' : 'CSV importieren (TradeRepublic)'}
               <input
                 type="file"
@@ -413,11 +449,11 @@ const inputClass = 'glass-input text-sm'
 
 function FormActions({ onCancel, submitLabel, busy }: { onCancel: () => void; submitLabel: string; busy: boolean }) {
   return (
-    <div className="flex gap-2 justify-end pt-1">
-      <button type="button" onClick={onCancel} className="glass-pill px-4 py-2 text-xs font-medium text-ink-400 hover:text-ink-100">
+    <div className="grid grid-cols-2 gap-2 pt-1 md:flex md:justify-end">
+      <button type="button" onClick={onCancel} className="glass-pill h-11 md:h-auto px-4 md:py-2 text-xs font-medium text-ink-400 hover:text-ink-100">
         Abbrechen
       </button>
-      <button type="submit" disabled={busy} className="glass-pill glass-pill-signal px-4 py-2 text-xs font-medium disabled:opacity-50">
+      <button type="submit" disabled={busy} className="glass-pill glass-pill-signal h-11 md:h-auto px-4 md:py-2 text-xs font-medium disabled:opacity-50">
         {busy ? 'Speichern…' : submitLabel}
       </button>
     </div>
@@ -642,7 +678,7 @@ function ManualPositionForm({ onCancel, onSaved, setError }: { onCancel: () => v
 
   return (
     <FormShell onSubmit={submit}>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field label="Symbol, ISIN oder WKN (Aktie/ETF: tippen für Vorschläge)">
           <TickerAutocomplete
             value={symbol}
@@ -674,7 +710,7 @@ function ManualPositionForm({ onCancel, onSaved, setError }: { onCancel: () => v
           </select>
         </Field>
       </div>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <Field label="Menge">
           <input className={inputClass} type="number" step="any" min="0" value={quantity} onChange={(e) => setQuantity(e.target.value)} required />
         </Field>
