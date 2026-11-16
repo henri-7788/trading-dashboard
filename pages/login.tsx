@@ -64,16 +64,16 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
-      <div className={`glass-panel p-8 w-full max-w-xs ${shake ? 'animate-shake' : ''}`}>
-        <h1 className="text-lg font-semibold text-ink-100 mb-1 text-center">Trading Dashboard</h1>
-        <p className="text-xs uppercase tracking-widest text-ink-400 mb-6 text-center">Code eingeben</p>
+      <div className={`card p-8 w-full max-w-xs ${shake ? 'animate-shake' : ''}`}>
+        <h1 className="text-xl font-normal tracking-[-0.02em] text-ink-900 mb-1 text-center">Trading Dashboard</h1>
+        <p className="text-xs uppercase tracking-widest text-ink-500 mb-6 text-center">Code eingeben</p>
 
         <div className="flex items-center justify-center gap-4 mb-2">
           {Array.from({ length: PIN_LENGTH }).map((_, i) => (
             <span
               key={i}
               className={`h-3.5 w-3.5 rounded-full border transition-colors ${
-                i < pin.length ? 'bg-signal border-signal' : 'bg-transparent border-white/25'
+                i < pin.length ? 'bg-teal-700 border-teal-700' : 'bg-transparent border-ink-300'
               }`}
             />
           ))}
@@ -91,7 +91,7 @@ export default function LoginPage() {
                   type="button"
                   onClick={backspace}
                   aria-label="Löschen"
-                  className="glass-pill aspect-square text-base text-ink-300 hover:text-ink-100"
+                  className="pill aspect-square text-base text-ink-600 hover:text-ink-900"
                 >
                   ⌫
                 </button>
@@ -103,7 +103,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={() => press(key)}
                 disabled={submitting}
-                className="glass-pill aspect-square text-xl font-medium text-ink-100 active:bg-white/[0.16] disabled:opacity-50"
+                className="pill aspect-square text-xl font-medium text-ink-900 active:bg-ink-150 disabled:opacity-50"
               >
                 {key}
               </button>

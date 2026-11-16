@@ -7,11 +7,11 @@ html, body, #__next {
 }
 
 body {
-  @apply bg-ink-950 text-ink-100;
+  @apply bg-[#edf0f0] text-ink-900 antialiased;
 }
 
 ::selection {
-  background: rgba(10, 132, 255, 0.3);
+  background: rgba(38, 101, 121, 0.22);
 }
 
 .tabular {
@@ -28,88 +28,139 @@ body {
   }
 }
 
-/* Touch screens get rid of the grey flash on tap; pressed states are drawn by the components. */
 html {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Bottom sheet entrance on phones — rises from the bottom edge with an exponential ease-out. */
-@keyframes sheet-up {
-  from { transform: translateY(24px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
+/* Shared surfaces and controls. Kept inside the components layer so utility classes on an element
+   (fixed, hidden, rounded-*, bg-*) always win over the recipe — no !important workarounds needed. */
+@layer components {
+  /* Card — a soft, near-white sheet resting on the cool grey page. */
+  .card {
+    @apply relative rounded-3xl border border-white bg-ink-50 shadow-card;
+  }
 
-.animate-sheet-up {
-  animation: sheet-up 320ms cubic-bezier(0.16, 1, 0.3, 1);
-}
+  .card-tight {
+    @apply relative rounded-2xl border border-white bg-ink-50 shadow-card;
+  }
 
-@media (prefers-reduced-motion: reduce) {
-  .animate-sheet-up {
-    animation: none;
+  /* Row — the white inset tile used for list entries inside a card. */
+  .card-row {
+    @apply rounded-2xl border border-ink-100 bg-white;
+  }
+
+  /* Pills — every button, select, and chip is a full capsule. */
+  .pill {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-full border border-ink-150 bg-white text-ink-800 transition-colors;
+  }
+
+  .pill:hover {
+    @apply border-ink-200 bg-ink-50;
+  }
+
+  .pill-primary {
+    @apply border-teal-800 bg-teal-800 text-white;
+  }
+
+  .pill-primary:hover {
+    @apply border-teal-700 bg-teal-700;
+  }
+
+  .pill-danger {
+    @apply border-down/20 bg-down-soft text-down;
+  }
+
+  .pill-danger:hover {
+    @apply border-down/30 bg-down/15;
+  }
+
+  /* On the petrol hero band: a solid white pill for the main action, a hairline ghost for the rest. */
+  .pill-on-dark {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/[0.06] text-white backdrop-blur-md transition-colors;
+  }
+
+  .pill-on-dark:hover {
+    @apply border-white/40 bg-white/[0.12];
+  }
+
+  .pill-on-dark-solid {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-full border border-white bg-white text-teal-900 transition-colors;
+  }
+
+  .pill-on-dark-solid:hover {
+    @apply bg-teal-50;
+  }
+
+  .field {
+    @apply w-full rounded-2xl border border-ink-150 bg-white px-3.5 py-2.5 text-ink-900 placeholder:text-ink-400 transition-colors focus:border-teal-500 focus:outline-none focus:ring-4 focus:ring-teal-500/10;
+  }
+
+  /* Small label above a figure inside a card. */
+  .eyebrow-label {
+    @apply text-[13px] text-ink-500;
   }
 }
 
-/* Liquid Glass material — a frosted panel that reveals the ambient background behind it.
-   Layered as one reusable class so every surface (header, stat card, table, form) shares
-   the same blur/border/sheen recipe instead of drifting apart edit by edit. */
-.glass-panel {
-  @apply relative rounded-3xl border border-white/10 bg-white/[0.06] backdrop-blur-2xl;
-  box-shadow:
-    0 16px 40px -16px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.14),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+/* Hero band — the deep petrol field across the top of every page, fading into the grey ground.
+   A fine dot screen sits over it so the colour reads as printed material rather than a flat fill. */
+.hero-band {
+  background:
+    radial-gradient(120% 90% at 85% 0%, rgba(94, 151, 169, 0.55) 0%, rgba(94, 151, 169, 0) 55%),
+    radial-gradient(90% 80% at 10% 10%, #082733 0%, rgba(8, 39, 51, 0) 70%),
+    linear-gradient(180deg, #0d3646 0%, #1a5366 45%, #6f9fae 78%, #edf0f0 100%);
 }
 
-.glass-panel-tight {
-  @apply relative rounded-2xl border border-white/10 bg-white/[0.06] backdrop-blur-2xl;
-  box-shadow:
-    0 10px 28px -14px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+.hero-band::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.11) 1px, transparent 1.2px);
+  background-size: 6px 6px;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 100%);
 }
 
-/* Pill controls — buttons, filters, status chips all round to a full capsule instead of the
-   old 2px "instrument" corner; glass tint communicates emphasis instead of a filled block. */
-.glass-pill {
-  @apply inline-flex items-center justify-center gap-1.5 rounded-full border border-white/[0.12] bg-white/[0.07] text-ink-100 backdrop-blur-xl transition-colors;
+/* Insight card — the one saturated card in the grid, the same petrol material as the band. */
+.insight-surface {
+  background:
+    radial-gradient(110% 90% at 100% 100%, rgba(143, 185, 198, 0.75) 0%, rgba(143, 185, 198, 0) 60%),
+    radial-gradient(80% 70% at 0% 0%, #0d3646 0%, rgba(13, 54, 70, 0) 75%),
+    linear-gradient(150deg, #134456 0%, #266579 55%, #5e97a9 100%);
 }
 
-.glass-pill:hover {
-  @apply bg-white/[0.12];
+.insight-surface.is-warning {
+  background:
+    radial-gradient(110% 90% at 100% 100%, rgba(232, 160, 150, 0.7) 0%, rgba(232, 160, 150, 0) 60%),
+    radial-gradient(80% 70% at 0% 0%, #4a1712 0%, rgba(74, 23, 18, 0) 75%),
+    linear-gradient(150deg, #5c1d16 0%, #9a3a30 55%, #d07a6e 100%);
 }
 
-.glass-pill-signal {
-  @apply border-signal/30 bg-signal/15 text-signal;
+/* Diagonal hatch for the highlighted bar in the monthly chart. */
+.bar-hatch {
+  background-image: repeating-linear-gradient(-45deg, #134456 0 2px, transparent 2px 6px);
+  background-color: #ffffff;
+  border: 1.5px solid #134456;
 }
 
-.glass-pill-signal:hover {
-  @apply bg-signal/25;
+.bar-hatch-down {
+  background-image: repeating-linear-gradient(-45deg, #c4463c 0 2px, transparent 2px 6px);
+  background-color: #ffffff;
+  border: 1.5px solid #c4463c;
 }
 
-.glass-pill-down {
-  @apply border-down/25 bg-down/10 text-down;
-}
-
-.glass-pill-down:hover {
-  @apply bg-down/20;
-}
-
-.glass-input {
-  @apply w-full rounded-2xl border border-white/[0.12] bg-white/[0.05] px-3.5 py-2.5 text-ink-100 placeholder:text-ink-400 transition-colors focus:border-signal/50 focus:outline-none focus:bg-white/[0.08];
-}
-
-/* Instrument readouts flash briefly on live value change instead of animating a physical flip. */
+/* Live readouts flash briefly on value change. */
 @keyframes value-flash-up {
-  0% { background-color: rgba(50, 215, 75, 0.24); }
+  0% { background-color: rgba(29, 133, 86, 0.16); }
   100% { background-color: transparent; }
 }
 
 @keyframes value-flash-down {
-  0% { background-color: rgba(255, 69, 58, 0.24); }
+  0% { background-color: rgba(196, 70, 60, 0.16); }
   100% { background-color: transparent; }
 }
 
 @keyframes value-flash-neutral {
-  0% { background-color: rgba(10, 132, 255, 0.2); }
+  0% { background-color: rgba(38, 101, 121, 0.14); }
   100% { background-color: transparent; }
 }
 
@@ -125,8 +176,7 @@ html {
   animation: value-flash-neutral 700ms ease-out;
 }
 
-/* PIN entry feedback: a quick horizontal shake marks a wrong code, echoing the
-   flash-on-change pattern used for live value ticks elsewhere in the system. */
+/* PIN entry feedback: a quick horizontal shake marks a wrong code. */
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   20% { transform: translateX(-8px); }
@@ -139,43 +189,28 @@ html {
   animation: shake 400ms ease-in-out;
 }
 
-/* Ambient background — slow drifting color fields the glass panels blur against. Motion is
-   large and slow (90s+) so it reads as atmosphere, never as something competing for attention. */
-@keyframes drift-a {
-  0%, 100% { transform: translate(-8%, -6%) scale(1); }
-  50% { transform: translate(6%, 8%) scale(1.15); }
+/* Bottom sheet entrance on phones — rises from the bottom edge with an exponential ease-out. */
+@keyframes sheet-up {
+  from { transform: translateY(24px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
-@keyframes drift-b {
-  0%, 100% { transform: translate(10%, 4%) scale(1.1); }
-  50% { transform: translate(-6%, -10%) scale(1); }
+.animate-sheet-up {
+  animation: sheet-up 320ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes drift-c {
-  0%, 100% { transform: translate(-4%, 10%) scale(1); }
-  50% { transform: translate(8%, -6%) scale(1.2); }
+/* Page entrance — cards settle upward once, staggered by their --i index. */
+@keyframes rise-in {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
-.bg-drift-a {
-  animation: drift-a 120s ease-in-out infinite;
+.rise-in {
+  animation: rise-in 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
 }
 
-.bg-drift-b {
-  animation: drift-b 150s ease-in-out infinite;
-}
-
-.bg-drift-c {
-  animation: drift-c 135s ease-in-out infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .bg-drift-a, .bg-drift-b, .bg-drift-c {
-    animation: none;
-  }
-}
-
-/* Skeleton placeholders — a faint glass bar with a slow sheen sweeping across, so loading
-   regions keep the final layout's shape instead of collapsing into a single spinner. */
+/* Skeleton placeholders — a faint bar with a slow sheen sweeping across. */
 @keyframes skeleton-sheen {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
@@ -183,18 +218,20 @@ html {
 
 .skeleton {
   @apply rounded-full;
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.06) 25%,
-    rgba(255, 255, 255, 0.13) 50%,
-    rgba(255, 255, 255, 0.06) 75%
-  );
+  background: linear-gradient(90deg, #e6eaeb 25%, #f3f5f6 50%, #e6eaeb 75%);
   background-size: 200% 100%;
   animation: skeleton-sheen 1.6s ease-in-out infinite;
 }
 
+.skeleton-on-dark {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.12) 25%, rgba(255, 255, 255, 0.22) 50%, rgba(255, 255, 255, 0.12) 75%);
+  background-size: 200% 100%;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .skeleton {
+  .skeleton,
+  .rise-in,
+  .animate-sheet-up {
     animation: none;
   }
 }

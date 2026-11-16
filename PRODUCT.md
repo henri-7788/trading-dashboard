@@ -37,11 +37,11 @@ Multi-source by design: Hyperliquid perps/spot and any ccxt-supported crypto exc
 
 ## Brand Commitments
 
-No naming/logo constraints — plain "Trading Dashboard" is fine. Visual register is a standing preference: **Liquid Glass** — frosted, translucent glass panels over a drifting ambient color field, in the register of Apple's visionOS/iOS material language. This explicitly replaces the earlier dense, flat, monospace-heavy trading-terminal identity (dYdX/Bloomberg register), which the owner retired by direct request on 2026-08-24 after finding it too cold/technical. An even earlier split-flap "departures board" identity (flap tiles, rivets, amber/bone palette) was also rejected as a gimmick before that. See DESIGN.md for the current system.
+No naming/logo constraints — plain "Trading Dashboard" is fine (own candlestick mark, never another product's name or logo). Visual register is a standing preference: **Petrol & paper** — a deep petrol hero band over a cool grey ground with calm near-white cards and petrol data marks, adopted 2026-11-16 from a fintech reference the owner supplied. It replaces **Liquid Glass** (frosted panels over an ambient colour field, 2026-08-24), which itself replaced a dense monospace trading-terminal identity; an even earlier split-flap "departures board" identity was rejected as a gimmick. See DESIGN.md for the current system.
 
 ## Evidence on Hand
 
-No real trade data reviewed yet (wallet not yet synced at time of writing). Current UI is documented in DESIGN.md (Liquid Glass redesign, 2026-08-24, replacing the prior trading-terminal identity).
+No real trade data reviewed yet (wallet not yet synced at time of writing). Current UI is documented in DESIGN.md (Petrol & paper redesign, 2026-11-16).
 
 ## Product Principles
 

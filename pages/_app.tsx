@@ -1,11 +1,11 @@
 import '../styles/globals.css'
 import type { AppProps } from 'next/app'
 import Head from 'next/head'
-import { Inter } from 'next/font/google'
+import { Geist } from 'next/font/google'
 import Background from '../components/Background'
 import PwaStatus from '../components/PwaStatus'
 
-const ui = Inter({ subsets: ['latin'], variable: '--font-ui' })
+const ui = Geist({ subsets: ['latin'], variable: '--font-ui' })
 
 export default function App({ Component, pageProps }: AppProps) {
   return (

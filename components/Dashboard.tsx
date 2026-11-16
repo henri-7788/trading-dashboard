@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import FlipValue from './FlipValue'
 import EquityCurve from './EquityCurve'
-import Skeleton, { SkeletonTableRows } from './Skeleton'
+import Skeleton from './Skeleton'
+import { MonthlyBars, SegmentMeter, TradeDotMatrix } from './Charts'
 
 interface Trade {
   id: string
@@ -65,7 +66,7 @@ const HOLDING_COLUMNS: { key: HoldingSortKey; label: string; numeric: boolean }[
 ]
 
 /** Rows visible while the holdings table is collapsed. */
-const HOLDINGS_COLLAPSED_COUNT = 3
+const HOLDINGS_COLLAPSED_COUNT = 4
 
 function holdingSortValue(h: Holding, key: HoldingSortKey): string | number | null {
   switch (key) {
@@ -131,11 +132,11 @@ function AssetIcon({
 }) {
   const sources = iconSourcesFor(symbol, assetClass)
   const [srcIndex, setSrcIndex] = useState(0)
-  const box = size === 'lg' ? 'h-8 w-8' : 'h-5 w-5'
+  const box = size === 'lg' ? 'h-9 w-9' : 'h-5 w-5'
 
   if (srcIndex >= sources.length) {
     return (
-      <span className={`flex ${box} shrink-0 items-center justify-center rounded-full bg-white/10 ${size === 'lg' ? 'text-xs' : 'text-[9px]'} font-semibold text-ink-400`}>
+      <span className={`flex ${box} shrink-0 items-center justify-center rounded-full bg-ink-150 ${size === 'lg' ? 'text-xs' : 'text-[9px]'} font-semibold text-ink-600`}>
         {symbol.slice(0, 1)}
       </span>
     )
@@ -434,349 +435,462 @@ export default function Dashboard() {
     })
   }, [statsScoped])
 
+  const closedSorted = useMemo(
+    () =>
+      statsScoped
+        .filter((t) => t.status === 'closed' && t.closedAt)
+        .sort((a, b) => new Date(a.closedAt!).getTime() - new Date(b.closedAt!).getTime())
+        .map((t) => ({ id: t.id, coin: t.coin, pnl: t.pnl, closedAt: t.closedAt! })),
+    [statsScoped]
+  )
+
+  // Monthly bars always look at the full history (not the range filter), since they show six months.
+  const allClosed = useMemo(
+    () =>
+      trades
+        .filter((t) => t.status === 'closed' && t.closedAt)
+        .filter((t) => (sideFilter === 'all' ? true : t.side === sideFilter))
+        .filter((t) => (coinFilter === 'all' ? true : t.coin === coinFilter))
+        .map((t) => ({ id: t.id, coin: t.coin, pnl: t.pnl, closedAt: t.closedAt! })),
+    [trades, sideFilter, coinFilter]
+  )
+
+  const holdingsTotal = useMemo(() => holdings.reduce((s, h) => s + (h.value ?? 0), 0), [holdings])
+  const [barMetric, setBarMetric] = useState<'pnl' | 'count'>('pnl')
+  const [activeSection, setActiveSection] = useState<'uebersicht' | 'portfolio' | 'trading'>('uebersicht')
+
+  // Scroll spy for the hero nav pills.
+  useEffect(() => {
+    const ids = ['uebersicht', 'portfolio', 'trading'] as const
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
+        if (visible[0]) setActiveSection(visible[0].target.id as (typeof ids)[number])
+      },
+      { rootMargin: '-35% 0px -55% 0px' }
+    )
+    ids.forEach((id) => {
+      const el = document.getElementById(id)
+      if (el) observer.observe(el)
+    })
+    return () => observer.disconnect()
+  }, [])
+
+  const openTrades = useMemo(() => trades.filter((t) => t.status === 'open'), [trades])
+  const riskiest = useMemo(() => {
+    const order = { critical: 0, warning: 1, caution: 2 } as const
+    return openTrades
+      .map((t) => ({ t, risk: liquidationRisk(t) }))
+      .filter((x): x is { t: Trade; risk: 'critical' | 'warning' | 'caution' } => x.risk != null && x.risk !== 'caution')
+      .sort((a, b) => order[a.risk] - order[b.risk])[0]
+  }, [openTrades])
+
+  const insight = useMemo(() => {
+    if (riskiest) {
+      const dist = liquidationDistancePct(riskiest.t)
+      return {
+        warning: true,
+        title: `${riskiest.t.coin} ${riskiest.t.side === 'long' ? 'Long' : 'Short'} nähert sich der Liquidation.`,
+        body: `Der Mark-Preis liegt nur noch ${dist != null ? `${dist.toFixed(1).replace('.', ',')} %` : 'wenig'} vom Liquidationspreis entfernt. Prüfe Margin oder Stop, bevor der Puffer aufgebraucht ist.`,
+        action: 'Position öffnen',
+        onAction: () => setSelectedTrade(riskiest.t)
+      }
+    }
+    if (stats.closed === 0) {
+      return {
+        warning: false,
+        title: 'Noch keine abgeschlossenen Trades.',
+        body: 'Sobald Positionen geschlossen sind, steht hier, wie sich Trefferquote und Profit Factor entwickeln.',
+        action: 'Trades ansehen',
+        onAction: () => document.getElementById('trading')?.scrollIntoView({ behavior: 'smooth' })
+      }
+    }
+    const wr = `${stats.winRate.toFixed(1).replace('.', ',')} %`
+    const pf = stats.profitFactor === Infinity ? '∞' : stats.profitFactor.toFixed(2).replace('.', ',')
+    const profitable = stats.profitFactor >= 1
+    return {
+      warning: false,
+      title: profitable ? 'Deine Gewinner tragen das Trading.' : 'Verluste überwiegen gerade.',
+      body: profitable
+        ? `Trefferquote ${wr}, Profit Factor ${pf}. Ein Ø Gewinn von ${usd(stats.avgWin)} steht einem Ø Verlust von ${usd(stats.avgLoss)} gegenüber.`
+        : `Trefferquote ${wr}, Profit Factor ${pf}. Ein Ø Verlust von ${usd(stats.avgLoss)} wiegt schwerer als ein Ø Gewinn von ${usd(stats.avgWin)}.`,
+      action: openTrades.length > 0 ? `${openTrades.length} offene Position${openTrades.length === 1 ? '' : 'en'}` : 'Trades ansehen',
+      onAction: () => {
+        if (openTrades.length > 0) setStatusFilter('open')
+        document.getElementById('trading')?.scrollIntoView({ behavior: 'smooth' })
+      }
+    }
+  }, [riskiest, stats, openTrades, hideValues])
+
+  const hour = new Date().getHours()
+  const greeting = hour < 5 ? 'Gute Nacht' : hour < 11 ? 'Guten Morgen' : hour < 18 ? 'Guten Tag' : 'Guten Abend'
+
   return (
     <div className="min-h-screen pb-16">
-      {/* THESIS: Liquid Glass — frosted, translucent instrument panels floating over an ambient color field, replacing the flat graphite terminal outright.
-          OWN-WORLD: rounded glass cards (backdrop-blur, soft white-hairline borders, sheen + shadow), pill-shaped controls and status chips, Apple system accent palette (signal blue / up green / down red / amber), Inter throughout with tabular figures for numbers instead of a monospace face.
-          STORY: owner opens the dashboard, scans a shared net-worth overview through glass, then reads Portfolio (holdings) and Trading (perps statistics) as two clearly separated glass panels.
-          FIRST VIEWPORT: ambient background, glass control bar, shared Main Statistik row as glass stat cards.
-          FORM: user-pinned direction — Liquid Glass (Apple-native frosted-material register), replacing the prior trading-terminal identity by explicit request.
+      {/* THESIS: one petrol band carries the greeting and the day's actions; everything below is calm near-white cards on cool grey, so the only saturated surfaces are the band, the insight card, and the data marks.
+          OWN-WORLD: deep petrol (#0d3646 → #5e97a9) band with a fine dot screen, #edf0f0 ground, soft white cards with white inset rows, capsule pills, Geist at regular weight with tight tracking for figures, petrol dot-matrix / segment-bar / hatched-bar charts, green and brick red only for PnL direction.
+          STORY: owner opens the dashboard, reads net worth and trading PnL at a glance, gets one sentence of interpretation (or a liquidation warning), then scans allocation, trades, and monthly results.
+          FIRST VIEWPORT: band with brand, section pills, greeting and Sync; below it three cards — net worth with equity curve, PnL per trade dot matrix, insight card.
+          FORM: user-supplied reference (petrol fintech dashboard), adapted to trading; replaces Liquid Glass by request on 2026-11-16.
           FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md. */}
-      <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 pt-[max(0.75rem,env(safe-area-inset-top))] md:pt-8">
-        {/* Phones: title row with the two icon controls in thumb reach, then a sync row underneath.
-            md+: everything on one line as before. */}
-        <header className="glass-panel px-4 py-3.5 md:px-5 md:py-4 mb-4 md:mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h1 className="text-base font-semibold text-ink-100">Trading Dashboard</h1>
-              {accountLoaded ? (
-                <p className="text-xs text-ink-400 mt-1 truncate">
-                  {connectionLabels.length > 0 ? connectionLabels.join(' · ') : 'Keine Verbindung konfiguriert'}
-                </p>
-              ) : (
-                <Skeleton className="h-3 w-40 mt-2" />
-              )}
-            </div>
-            <div className="flex items-center gap-2 md:hidden">
-              <EyeToggle hideValues={hideValues} onToggle={toggleHideValues} />
-              <Link href="/settings" className="glass-pill h-11 w-11 text-ink-100" aria-label="Einstellungen" title="Einstellungen">
-                <GearIcon />
-              </Link>
-            </div>
+      <div className="mx-auto max-w-[1240px] px-3 sm:px-5 md:px-8 pt-[max(0.5rem,env(safe-area-inset-top))] md:pt-5">
+        {/* Top bar on the petrol band */}
+        <nav className="flex h-14 items-center justify-between gap-3" aria-label="Hauptnavigation">
+          <a href="#uebersicht" onClick={(e) => scrollToSection(e, '#uebersicht')} className="flex items-center gap-2.5 text-white">
+            <BrandMark />
+            <span className="text-[17px] md:text-[19px] font-medium tracking-[-0.015em]">Trading Dashboard</span>
+          </a>
+          <div className="hidden lg:flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] p-1 backdrop-blur-md">
+            <NavPill href="#uebersicht" active={activeSection === 'uebersicht'} icon={<OverviewIcon />}>
+              Übersicht
+            </NavPill>
+            <NavPill href="#portfolio" active={activeSection === 'portfolio'} icon={<PieIcon />}>
+              Portfolio
+            </NavPill>
+            <NavPill href="#trading" active={activeSection === 'trading'} icon={<PulseIcon />}>
+              Trading
+            </NavPill>
           </div>
-          <div className="flex items-center justify-between gap-3 border-t border-white/[0.08] pt-3 md:border-0 md:pt-0 md:justify-end">
-            <div className="md:text-right">
-              <div className="text-[10px] uppercase tracking-widest text-ink-400 whitespace-nowrap">Zuletzt synced</div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleHideValues}
+              className="pill-on-dark h-11 w-11"
+              aria-label={hideValues ? 'Geldwerte anzeigen' : 'Geldwerte verbergen'}
+              aria-pressed={!hideValues}
+              title={hideValues ? 'Geldwerte anzeigen' : 'Geldwerte verbergen'}
+            >
+              <EyeIcon open={!hideValues} />
+            </button>
+            <Link href="/settings" className="pill-on-dark h-11 w-11" aria-label="Einstellungen" title="Einstellungen">
+              <GearIcon />
+            </Link>
+          </div>
+        </nav>
+
+        {/* Greeting + primary actions */}
+        <section id="uebersicht" className="scroll-mt-6 pt-7 md:pt-12 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+          <div className="text-white">
+            <h1 className="text-[2rem] md:text-[2.75rem] font-normal leading-[1.05] tracking-[-0.035em]" suppressHydrationWarning>
+              {greeting}.
+            </h1>
+            <p className="mt-3 max-w-[48ch] text-[15px] leading-relaxed text-white/75">
+              {accountLoaded
+                ? connectionLabels.length > 0
+                  ? `Vermögen, offene Positionen und Trading-Performance aus ${connectionLabels.join(', ')} auf einen Blick.`
+                  : 'Noch keine Verbindung eingerichtet. Füge in den Einstellungen eine Börse oder Wallet hinzu.'
+                : 'Vermögen, offene Positionen und Trading-Performance auf einen Blick.'}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="mr-1 text-right text-white/70 hidden sm:block">
+              <div className="text-[11px] uppercase tracking-[0.12em]">Zuletzt synced</div>
               {loading ? (
-                <Skeleton className="h-3 w-24 mt-1 md:ml-auto" />
+                <span className="skeleton skeleton-on-dark mt-1 ml-auto block h-3 w-24" />
               ) : (
-                <div className="text-xs text-ink-100 tabular">{lastSyncedAt ? fmtDate(lastSyncedAt) : 'nie'}</div>
+                <div className="text-[13px] text-white tabular">{lastSyncedAt ? fmtDate(lastSyncedAt) : 'nie'}</div>
               )}
             </div>
-            <div className="flex items-center gap-3">
-              <span className="hidden md:inline-flex">
-                <EyeToggle hideValues={hideValues} onToggle={toggleHideValues} />
-              </span>
-              <button
-                onClick={syncNow}
-                disabled={syncing}
-                className="glass-pill glass-pill-signal h-11 px-5 md:h-auto md:px-4 md:py-2 text-sm md:text-xs font-medium whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <SyncIcon spinning={syncing} />
-                {syncing ? 'Syncing…' : 'Sync now'}
-              </button>
-              {/* Wrapper carries the visibility: .glass-pill's own display would override `hidden`. */}
-              <span className="hidden md:inline-flex">
-                <Link href="/settings" className="glass-pill px-4 py-2 text-xs font-medium">
-                  Einstellungen
-                </Link>
-              </span>
-            </div>
+            <button
+              type="button"
+              onClick={toggleHideValues}
+              className="pill-on-dark h-11 px-5 text-sm hidden sm:inline-flex"
+              aria-pressed={!hideValues}
+            >
+              {hideValues ? 'Werte anzeigen' : 'Werte verbergen'}
+            </button>
+            <button
+              onClick={syncNow}
+              disabled={syncing}
+              className="pill-on-dark-solid h-11 flex-1 sm:flex-none px-5 text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <SyncIcon spinning={syncing} />
+              {syncing ? 'Synchronisiere…' : 'Jetzt synchronisieren'}
+            </button>
           </div>
-        </header>
+          <div className="sm:hidden -mt-2 text-[12px] text-white/70 tabular">
+            Zuletzt synced: {loading ? '…' : lastSyncedAt ? fmtDate(lastSyncedAt) : 'nie'}
+          </div>
+        </section>
 
-        {error && <div className="glass-panel-tight mb-6 px-4 py-3 text-sm text-down border-down/25">{error}</div>}
+        {error && <div className="card-tight mt-5 px-4 py-3 text-sm text-down">{error}</div>}
 
-        {/* Main Statistik — shared overview across Portfolio (stocks/ETFs/crypto) and Trading */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 md:gap-3 mb-6">
-          <StatModule label="Gesamtvermögen" loading={!accountLoaded}>
-            <FlipValue value={accountValue != null ? usd(accountValue) : '—'} size="lg" tone="bone" />
-          </StatModule>
-          <StatModule label="Portfolio-Wert" loading={!accountLoaded}>
-            <FlipValue value={holdingsValue != null ? usd(holdingsValue) : '—'} size="lg" tone="bone" />
-          </StatModule>
-          <StatModule label="Trading PNL (All-Time)" loading={loading}>
-            <FlipValue value={usd(allTimeTradingPnl)} size="lg" tone={allTimeTradingPnl >= 0 ? 'up' : 'down'} />
-          </StatModule>
-          <StatModule label="Verfügbares Cash" loading={!accountLoaded}>
-            <FlipValue value={withdrawable != null ? usd(withdrawable) : '—'} size="lg" tone="bone" />
-          </StatModule>
-        </div>
-
-        <SectionHeader>Portfolio</SectionHeader>
-
-        {/* Holdings */}
-        <div className="glass-panel overflow-hidden mb-8 md:mb-10">
-          {holdingsLoaded && holdings.length === 0 ? (
-            <div className="py-12 text-center text-ink-400 text-sm">
-              Keine gehaltenen Positionen. Kryptos werden beim Sync erfasst, Aktien/ETFs unter Einstellungen manuell.
+        {/* First row: net worth · PnL per trade · insight */}
+        <div className="mt-7 md:mt-10 grid gap-3 md:gap-4 lg:grid-cols-3">
+          <div className="card rise-in p-5 md:p-6 flex flex-col min-h-[248px]" style={{ ['--i' as string]: 0 }}>
+            <div className="flex items-center gap-3">
+              <IconChip>
+                <WalletIcon />
+              </IconChip>
+              <span className="text-[15px] text-ink-800">Gesamtvermögen</span>
             </div>
-          ) : (
-            <>
-            {/* Phones: one row per holding — what it is on the left, what it's worth and how it's doing on the right. */}
-            <div className="md:hidden">
-              <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-white/10">
-                <span className="text-[10px] uppercase tracking-widest text-ink-400">Sortieren</span>
-                <div className="flex items-center gap-1.5">
-                  <select
-                    value={holdingSort.key}
-                    onChange={(e) => {
-                      const col = HOLDING_COLUMNS.find((c) => c.key === e.target.value)!
-                      setHoldingSort({ key: col.key, dir: col.numeric ? 'desc' : 'asc' })
-                    }}
-                    aria-label="Sortieren nach"
-                    className="h-9 bg-transparent text-ink-100 text-right focus:outline-none"
-                  >
-                    {HOLDING_COLUMNS.map((c) => (
-                      <option key={c.key} value={c.key} className="bg-ink-900">
-                        {c.label}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => setHoldingSort((cur) => ({ ...cur, dir: cur.dir === 'asc' ? 'desc' : 'asc' }))}
-                    className="glass-pill h-9 w-9 text-ink-300"
-                    aria-label={holdingSort.dir === 'asc' ? 'Aufsteigend — umkehren' : 'Absteigend — umkehren'}
-                  >
-                    <ChevronIcon up={holdingSort.dir === 'asc'} />
-                  </button>
+            <div className="mt-auto flex items-end gap-4 pt-6">
+              <div className="min-w-0 shrink-0">
+                {!accountLoaded ? (
+                  <Skeleton className="h-10 w-40 rounded-xl" />
+                ) : (
+                  <FlipValue value={accountValue != null ? usd(accountValue) : '—'} size="xl" tone="bone" />
+                )}
+                <div className="mt-2.5 flex items-center gap-1.5 text-[13px] text-ink-500">
+                  <TrendIcon down={allTimeTradingPnl < 0} />
+                  {loading ? (
+                    <Skeleton className="h-3 w-20" />
+                  ) : (
+                    <span className={allTimeTradingPnl >= 0 ? 'text-up' : 'text-down'}>{usd(allTimeTradingPnl)}</span>
+                  )}
+                  <span>Trading-PnL</span>
                 </div>
               </div>
-              <ul>
+              <EquityCurve points={equityPoints.slice(-40)} className="h-24 min-w-0 flex-1" />
+            </div>
+            <div className="mt-5 grid grid-cols-2 divide-x divide-ink-150 rounded-2xl bg-white px-1 py-3 border border-ink-100">
+              <MiniFigure label="Portfolio" loading={!accountLoaded} value={holdingsValue != null ? usd(holdingsValue) : '—'} />
+              <MiniFigure label="Verfügbares Cash" loading={!accountLoaded} value={withdrawable != null ? usd(withdrawable) : '—'} />
+            </div>
+          </div>
+
+          <div className="card rise-in p-5 md:p-6 flex flex-col min-h-[248px]" style={{ ['--i' as string]: 1 }}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="eyebrow-label">PnL pro Trade · {range === 'all' ? 'All-Time' : RANGE_LABEL[range]}</div>
+                {loading ? (
+                  <Skeleton className="mt-2 h-8 w-32 rounded-lg" />
+                ) : (
+                  <FlipValue value={usd(stats.totalPnl)} size="lg" tone={stats.totalPnl >= 0 ? 'up' : 'down'} />
+                )}
+              </div>
+              <PillSelect
+                label="Zeitraum"
+                value={range}
+                onChange={(v) => setRange(v as Range)}
+                options={[
+                  ['all', 'All-Time'],
+                  ['30d', '30 Tage'],
+                  ['7d', '7 Tage'],
+                  ['24h', '24 Std.']
+                ]}
+              />
+            </div>
+            <div className="mt-5 flex-1">
+              {loading ? <Skeleton className="h-[188px] w-full rounded-2xl" /> : <TradeDotMatrix trades={closedSorted} hideValues={hideValues} />}
+            </div>
+          </div>
+
+          <div
+            className={`insight-surface ${insight.warning ? 'is-warning' : ''} rise-in relative overflow-hidden rounded-3xl p-6 md:p-7 flex flex-col min-h-[248px] text-white shadow-float`}
+            style={{ ['--i' as string]: 2 }}
+          >
+            <div className="flex items-center gap-2 text-[12px] uppercase tracking-[0.12em] text-white/70">
+              {insight.warning ? <AlertIcon /> : <SparkIcon />}
+              {insight.warning ? 'Achtung' : 'Einordnung'}
+            </div>
+            {loading ? (
+              <div className="mt-4 flex flex-col gap-2.5">
+                <span className="skeleton skeleton-on-dark block h-6 w-4/5" />
+                <span className="skeleton skeleton-on-dark block h-4 w-full" />
+                <span className="skeleton skeleton-on-dark block h-4 w-3/5" />
+              </div>
+            ) : (
+              <>
+                <h2 className="mt-3 text-[1.5rem] md:text-[1.625rem] font-normal leading-[1.15] tracking-[-0.025em] text-balance">{insight.title}</h2>
+                <p className="mt-3 max-w-[42ch] text-[14px] leading-relaxed text-white/80">{insight.body}</p>
+              </>
+            )}
+            <div className="mt-auto pt-6">
+              <button type="button" onClick={insight.onAction} className="pill-on-dark-solid h-11 px-5 text-sm font-medium">
+                {insight.action}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Second row: allocation · trades · monthly + key figures */}
+        <div className="mt-3 md:mt-4 grid gap-3 md:gap-4 lg:grid-cols-3 lg:items-start">
+          {/* Portfolio allocation */}
+          <section id="portfolio" className="card rise-in scroll-mt-6 p-4 md:p-5" style={{ ['--i' as string]: 3 }}>
+            <div className="flex items-start justify-between gap-3 px-1">
+              <div className="min-w-0">
+                <h2 className="text-[15px] font-medium text-ink-900">Wo dein Geld liegt</h2>
+                <p className="mt-0.5 text-[12px] text-ink-500 tabular">
+                  {holdingsLoaded ? `${usd(holdingsTotal)} in ${holdings.length} Positionen` : 'Lade Positionen…'}
+                </p>
+              </div>
+              <PillSelect
+                label="Sortieren"
+                value={`${holdingSort.key}:${holdingSort.dir}`}
+                onChange={(v) => {
+                  const [key, dir] = v.split(':') as [HoldingSortKey, SortDir]
+                  setHoldingSort({ key, dir })
+                }}
+                options={[
+                  ['value:desc', 'Größte zuerst'],
+                  ['value:asc', 'Kleinste zuerst'],
+                  ['unrealizedPnl:desc', 'Bester PnL'],
+                  ['unrealizedPnl:asc', 'Schwächster PnL'],
+                  ['name:asc', 'Name A–Z'],
+                  ['assetClass:asc', 'Typ'],
+                  ['source:asc', 'Quelle']
+                ]}
+              />
+            </div>
+
+            {holdingsLoaded && holdings.length === 0 ? (
+              <div className="card-row mt-4 px-4 py-10 text-center text-sm text-ink-500">
+                Keine gehaltenen Positionen. Kryptos werden beim Sync erfasst, Aktien und ETFs trägst du unter Einstellungen ein.
+              </div>
+            ) : (
+              <ul className="mt-4 flex flex-col gap-2">
                 {!holdingsLoaded &&
-                  Array.from({ length: 3 }, (_, i) => (
-                    <li key={i} className="flex items-center justify-between gap-3 px-4 py-3.5 border-b border-white/[0.06] last:border-0">
-                      <div className="flex items-center gap-3">
-                        <Skeleton className="h-8 w-8 shrink-0" />
-                        <div className="flex flex-col gap-1.5">
-                          <Skeleton className="h-3.5 w-24" />
-                          <Skeleton className="h-3 w-16" />
-                        </div>
+                  Array.from({ length: 4 }, (_, i) => (
+                    <li key={i} className="card-row flex items-center gap-3 px-3.5 py-3.5">
+                      <Skeleton className="h-9 w-9 shrink-0" />
+                      <div className="flex flex-1 flex-col gap-1.5">
+                        <Skeleton className="h-3.5 w-28" />
+                        <Skeleton className="h-3 w-40" />
                       </div>
-                      <div className="flex flex-col items-end gap-1.5">
-                        <Skeleton className="h-3.5 w-20" />
-                        <Skeleton className="h-3 w-14" />
-                      </div>
+                      <Skeleton className="h-4 w-24" />
                     </li>
                   ))}
-                {visibleHoldings.map((h, i) => (
-                  <li key={`${h.source}-${h.symbol}-${i}`} className="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/[0.06] last:border-0">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <AssetIcon symbol={h.symbol} assetClass={h.assetClass} size="lg" />
-                      <div className="min-w-0">
-                        <div className="text-sm text-ink-100 font-medium truncate">{h.name && h.name !== h.symbol ? h.name : h.symbol}</div>
-                        <div className="text-xs text-ink-400 mt-0.5 truncate tabular">
-                          {qty(h.quantity, 6)} {h.symbol} · {h.sourceLabel}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <div className="text-sm text-ink-100 font-medium tabular">{h.value != null ? usd(h.value) : '—'}</div>
-                      <div className={`text-xs tabular mt-0.5 ${h.unrealizedPnl == null ? 'text-ink-400' : h.unrealizedPnl >= 0 ? 'text-up' : 'text-down'}`}>
-                        {h.unrealizedPnl != null ? usd(h.unrealizedPnl) : h.price != null ? fmtUsd(h.price) : '—'}
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-[10px] uppercase tracking-widest text-ink-400 border-b border-white/10">
-                    {HOLDING_COLUMNS.map((col) => {
-                      const active = holdingSort.key === col.key
-                      return (
-                        <th
-                          key={col.key}
-                          className="py-3 px-4 font-medium"
-                          aria-sort={active ? (holdingSort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => toggleHoldingSort(col.key, col.numeric)}
-                            className={`inline-flex items-center gap-1 uppercase tracking-widest transition-colors hover:text-ink-100 ${active ? 'text-ink-100' : ''}`}
-                          >
-                            {col.label}
-                            <span className={`text-[9px] ${active ? 'opacity-100' : 'opacity-0'}`} aria-hidden="true">
-                              {active && holdingSort.dir === 'asc' ? '▲' : '▼'}
+                {visibleHoldings.map((h, i) => {
+                  const share = holdingsTotal > 0 && h.value != null ? h.value / holdingsTotal : 0
+                  return (
+                    <li key={`${h.source}-${h.symbol}-${i}`} className="card-row px-3.5 py-3">
+                      <div className="flex items-center gap-3">
+                        <AssetIcon symbol={h.symbol} assetClass={h.assetClass} size="lg" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-baseline justify-between gap-3">
+                            <span className="truncate text-[15px] text-ink-900">{h.name && h.name !== h.symbol ? h.name : h.symbol}</span>
+                            <span className="shrink-0 text-[15px] text-ink-900 tabular">{h.value != null ? usd(h.value) : '—'}</span>
+                          </div>
+                          <div className="mt-0.5 flex items-baseline justify-between gap-3 text-[12px] text-ink-500">
+                            <span className="truncate tabular">
+                              {qty(h.quantity, 6)} {h.symbol}
+                              {h.price != null && ` à ${fmtUsd(h.price)}`} · {h.sourceLabel}
                             </span>
-                          </button>
-                        </th>
-                      )
-                    })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {!holdingsLoaded && <SkeletonTableRows columns={7} rows={3} />}
-                  {visibleHoldings.map((h, i) => (
-                    <tr key={`${h.source}-${h.symbol}-${i}`} className="border-b border-white/[0.06] last:border-0 hover:bg-white/[0.04] transition-colors">
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <AssetIcon symbol={h.symbol} assetClass={h.assetClass} />
-                          <div>
-                            <div className="text-ink-100 font-medium">{h.name && h.name !== h.symbol ? h.name : h.symbol}</div>
-                            {h.name && h.name !== h.symbol && <div className="text-ink-400 text-xs mt-0.5">{h.symbol}</div>}
+                            {h.unrealizedPnl != null && (
+                              <span className={`shrink-0 tabular ${h.unrealizedPnl >= 0 ? 'text-up' : 'text-down'}`}>{usd(h.unrealizedPnl)}</span>
+                            )}
                           </div>
                         </div>
-                      </td>
-                      <td className="py-3 px-4 text-ink-400">{ASSET_CLASS_LABEL[h.assetClass]}</td>
-                      <td className="py-3 px-4 text-ink-400">{h.sourceLabel}</td>
-                      <td className="py-3 px-4 tabular text-ink-400">{qty(h.quantity, 6)}</td>
-                      <td className="py-3 px-4 tabular text-ink-400">{h.price != null ? fmtUsd(h.price) : '—'}</td>
-                      <td className="py-3 px-4 tabular text-ink-100 font-medium">{h.value != null ? usd(h.value) : '—'}</td>
-                      <td className={`py-3 px-4 tabular font-medium ${h.unrealizedPnl == null ? 'text-ink-400' : h.unrealizedPnl >= 0 ? 'text-up' : 'text-down'}`}>
-                        {h.unrealizedPnl != null ? usd(h.unrealizedPnl) : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-              {hiddenHoldingsCount > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setHoldingsExpanded((v) => !v)}
-                  aria-expanded={holdingsExpanded}
-                  className="w-full border-t border-white/10 py-3.5 md:py-3 text-xs font-medium text-ink-400 hover:text-ink-100 hover:bg-white/[0.04] active:bg-white/[0.06] transition-colors"
-                >
-                  {holdingsExpanded ? 'Weniger anzeigen ▲' : `${hiddenHoldingsCount} weitere ▼`}
-                </button>
-              )}
-            </>
-          )}
-        </div>
-
-        <SectionHeader>Trading</SectionHeader>
-
-        {/* Trading-Statistiken — primary tier */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 md:gap-3 mb-2.5 md:mb-3">
-          <StatModule label={`PNL (${range === 'all' ? 'All-Time' : range})`} loading={loading} className="col-span-2 lg:col-span-1">
-            <FlipValue value={usd(stats.totalPnl)} size="lg" tone={stats.totalPnl >= 0 ? 'up' : 'down'} />
-          </StatModule>
-          <StatModule label="Win Rate" loading={loading}>
-            <FlipValue value={`${stats.winRate.toFixed(1)}%`} size="lg" tone="amber" />
-          </StatModule>
-          <StatModule label="Profit Factor" loading={loading}>
-            <FlipValue value={stats.profitFactor === Infinity ? '∞' : stats.profitFactor.toFixed(2)} size="lg" tone="amber" />
-          </StatModule>
-          <StatModule label="Offene Positionen" loading={loading}>
-            <FlipValue value={String(stats.open).padStart(2, '0')} size="lg" tone="bone" />
-          </StatModule>
-          <StatModule label="Geschlossene Trades" loading={loading}>
-            <FlipValue value={String(stats.closed).padStart(2, '0')} size="lg" tone="bone" />
-          </StatModule>
-        </div>
-
-        {/* Trading-Statistiken — secondary tier */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 md:gap-3 mb-6">
-          <StatModule label="Ø Gewinn" loading={loading} size="md">
-            <FlipValue value={usd(stats.avgWin)} size="md" tone="up" />
-          </StatModule>
-          <StatModule label="Ø Verlust" loading={loading} size="md">
-            <FlipValue value={usd(-stats.avgLoss)} size="md" tone="down" />
-          </StatModule>
-          <StatModule label="Bester Trade" loading={loading} size="md">
-            <FlipValue value={usd(stats.best)} size="md" tone={stats.best >= 0 ? 'up' : 'down'} />
-          </StatModule>
-          <StatModule label="Schlechtester Trade" loading={loading} size="md">
-            <FlipValue value={usd(stats.worst)} size="md" tone={stats.worst >= 0 ? 'up' : 'down'} />
-          </StatModule>
-          <StatModule label="Ø Haltedauer" loading={loading} size="md" className="col-span-2 lg:col-span-1">
-            <FlipValue value={fmtDurationMs(stats.avgDurationMs)} size="md" tone="bone" />
-          </StatModule>
-        </div>
-
-        {/* Equity curve */}
-        <div className="glass-panel p-5 mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs uppercase tracking-widest text-ink-400">Equity Curve (kumuliert)</h3>
-          </div>
-          {loading ? <Skeleton className="h-40 md:h-52 w-full rounded-2xl" /> : <EquityCurve points={equityPoints} />}
-        </div>
-
-        {/* Filters */}
-        <div className="glass-panel p-3.5 md:p-4 mb-3 md:mb-4 grid grid-cols-2 gap-x-3 gap-y-2.5 md:flex md:flex-wrap md:gap-3 md:items-center">
-          <FilterSelect label="Zeitraum" value={range} onChange={(v) => setRange(v as Range)} options={[['all', 'All-Time'], ['30d', '30 Tage'], ['7d', '7 Tage'], ['24h', '24h']]} />
-          <FilterSelect label="Status" value={statusFilter} onChange={(v) => setStatusFilter(v as StatusFilter)} options={[['all', 'Alle'], ['open', 'Offen'], ['closed', 'Geschlossen']]} />
-          <FilterSelect label="Seite" value={sideFilter} onChange={(v) => setSideFilter(v as SideFilter)} options={[['all', 'Alle'], ['long', 'Long'], ['short', 'Short']]} />
-          <FilterSelect label="Coin" value={coinFilter} onChange={setCoinFilter} options={[['all', 'Alle'], ...coins.map((c) => [c, c] as [string, string])]} />
-          {loading ? (
-            <Skeleton className="hidden md:block ml-auto h-3 w-14" />
-          ) : (
-            <div className="hidden md:block ml-auto text-xs text-ink-400 tabular">{filtered.length} Trades</div>
-          )}
-        </div>
-
-        {/* Trade table */}
-        <div className="glass-panel overflow-hidden">
-          {/* Phones: each trade is one tappable row — coin, side and leverage left, PnL right; tap opens the detail sheet. */}
-          <div className="md:hidden">
-            {!loading && filtered.length > 0 && (
-              <div className="px-4 py-2.5 border-b border-white/10 text-[10px] uppercase tracking-widest text-ink-400 tabular">{filtered.length} Trades</div>
-            )}
-            <ul>
-              {loading &&
-                Array.from({ length: 3 }, (_, i) => (
-                  <li key={i} className="flex items-center justify-between gap-3 px-4 py-3.5 border-b border-white/[0.06] last:border-0">
-                    <div className="flex items-center gap-3">
-                      <Skeleton className="h-8 w-8 shrink-0" />
-                      <div className="flex flex-col gap-1.5">
-                        <Skeleton className="h-3.5 w-24" />
-                        <Skeleton className="h-3 w-32" />
                       </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1.5">
+                      <div className="mt-2.5 flex items-center justify-between gap-3 pl-12">
+                        <span className="text-[11px] uppercase tracking-[0.1em] text-ink-400">{ASSET_CLASS_LABEL[h.assetClass]}</span>
+                        <span className="flex items-center gap-2.5">
+                          <SegmentMeter share={share} />
+                          <span className="w-9 text-right text-[12px] text-ink-700 tabular">{Math.round(share * 100)}%</span>
+                        </span>
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+            {hiddenHoldingsCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setHoldingsExpanded((v) => !v)}
+                aria-expanded={holdingsExpanded}
+                className="pill mt-3 h-10 w-full text-[13px] text-ink-700"
+              >
+                {holdingsExpanded ? 'Weniger anzeigen' : `${hiddenHoldingsCount} weitere anzeigen`}
+                <ChevronIcon up={holdingsExpanded} />
+              </button>
+            )}
+          </section>
+
+          {/* Trades */}
+          <section id="trading" className="card rise-in scroll-mt-6 p-4 md:p-5" style={{ ['--i' as string]: 4 }}>
+            <div className="flex items-start justify-between gap-3 px-1">
+              <div>
+                <h2 className="text-[15px] font-medium text-ink-900">Trades</h2>
+                <p className="mt-0.5 text-[12px] text-ink-500 tabular">
+                  {loading ? 'Lade Trades…' : `${filtered.length} ${filtered.length === 1 ? 'Trade' : 'Trades'} im Filter`}
+                </p>
+              </div>
+              <PillSelect
+                label="Status"
+                value={statusFilter}
+                onChange={(v) => setStatusFilter(v as StatusFilter)}
+                options={[
+                  ['open', 'Offen'],
+                  ['closed', 'Geschlossen'],
+                  ['all', 'Alle']
+                ]}
+              />
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2 px-1">
+              <PillSelect
+                label="Seite"
+                value={sideFilter}
+                onChange={(v) => setSideFilter(v as SideFilter)}
+                options={[
+                  ['all', 'Long & Short'],
+                  ['long', 'Nur Long'],
+                  ['short', 'Nur Short']
+                ]}
+                size="sm"
+              />
+              <PillSelect
+                label="Coin"
+                value={coinFilter}
+                onChange={setCoinFilter}
+                options={[['all', 'Alle Coins'], ...coins.map((c) => [c, c] as [string, string])]}
+                size="sm"
+              />
+            </div>
+
+            <ul className="mt-4 flex flex-col gap-2">
+              {loading &&
+                Array.from({ length: 4 }, (_, i) => (
+                  <li key={i} className="card-row flex items-center gap-3 px-3.5 py-3.5">
+                    <Skeleton className="h-9 w-9 shrink-0" />
+                    <div className="flex flex-1 flex-col gap-1.5">
                       <Skeleton className="h-3.5 w-20" />
-                      <Skeleton className="h-3 w-12" />
+                      <Skeleton className="h-3 w-36" />
                     </div>
+                    <Skeleton className="h-4 w-20" />
                   </li>
                 ))}
               {filtered.map((t) => {
                 const pct = pnlPct(t)
                 const risk = liquidationRisk(t)
                 return (
-                  <li key={t.id} className="border-b border-white/[0.06] last:border-0">
+                  <li key={t.id}>
                     <button
                       type="button"
                       onClick={() => setSelectedTrade(t)}
-                      className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left active:bg-white/[0.06] transition-colors"
+                      className="card-row group flex w-full items-center gap-3 px-3.5 py-3 text-left transition-colors hover:border-ink-200 active:bg-ink-50"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <AssetIcon symbol={t.coin} assetClass="crypto" size="lg" />
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 text-sm">
-                            <span className="text-ink-100 font-medium">{t.coin}</span>
-                            <span className={`text-[10px] uppercase tracking-wide font-medium ${t.side === 'long' ? 'text-up' : 'text-down'}`}>
-                              {t.side}
-                              {t.leverage != null && ` ${t.leverage}x`}
+                      <AssetIcon symbol={t.coin} assetClass="crypto" size="lg" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[15px] text-ink-900">{t.coin}</span>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em] ${
+                              t.side === 'long' ? 'bg-up-soft text-up' : 'bg-down-soft text-down'
+                            }`}
+                          >
+                            {t.side}
+                            {t.leverage != null && ` ${t.leverage}x`}
+                          </span>
+                          {t.status === 'open' && (
+                            <span className="flex items-center gap-1 text-[11px] text-teal-700">
+                              <span className="h-1.5 w-1.5 rounded-full bg-teal-600" />
+                              Offen
                             </span>
-                            {t.status === 'open' && <span className="h-1.5 w-1.5 rounded-full bg-signal" aria-label="Offen" />}
-                          </div>
-                          <div className="text-xs text-ink-400 mt-0.5 truncate tabular">
-                            {t.connectionLabel ? `${t.connectionLabel} · ` : ''}
-                            {fmtDate(t.openedAt)}
-                          </div>
+                          )}
+                        </div>
+                        <div className="mt-0.5 truncate text-[12px] text-ink-500 tabular">
+                          {t.connectionLabel ? `${t.connectionLabel} · ` : ''}
+                          {fmtDate(t.closedAt || t.openedAt)}
                         </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <div className={`text-sm font-medium tabular ${t.pnl >= 0 ? 'text-up' : 'text-down'}`}>{usd(t.pnl)}</div>
-                        <div className="flex items-center justify-end gap-1 text-xs tabular mt-0.5">
+                      <div className="shrink-0 text-right">
+                        <div className={`text-[15px] tabular ${t.pnl >= 0 ? 'text-up' : 'text-down'}`}>{usd(t.pnl)}</div>
+                        <div className="mt-0.5 flex items-center justify-end gap-1 text-[12px] tabular">
                           {risk && (
-                            <span className={LIQUIDATION_RISK_STYLE[risk]} aria-label={LIQUIDATION_RISK_LABEL[risk]}>
-                              ⚠
+                            <span className={`${LIQUIDATION_RISK_STYLE[risk]} flex`} title={LIQUIDATION_RISK_LABEL[risk]} aria-label={LIQUIDATION_RISK_LABEL[risk]}>
+                              <AlertIcon size={13} />
                             </span>
                           )}
                           <span className={pct == null ? 'text-ink-400' : pct >= 0 ? 'text-up/80' : 'text-down/80'}>{pct != null ? fmtPct(pct) : '—'}</span>
@@ -787,82 +901,66 @@ export default function Dashboard() {
                 )
               })}
             </ul>
-          </div>
+            {!loading && filtered.length === 0 && (
+              <div className="card-row mt-4 px-4 py-10 text-center text-sm text-ink-500">
+                {trades.length === 0 ? 'Noch keine Trades synchronisiert. Tippe oben auf „Jetzt synchronisieren“.' : 'Keine Trades in diesem Filter.'}
+              </div>
+            )}
+          </section>
 
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-[10px] uppercase tracking-widest text-ink-400 border-b border-white/10">
-                  <th className="py-3 px-4 font-medium">Coin</th>
-                  <th className="py-3 px-4 font-medium">Quelle</th>
-                  <th className="py-3 px-4 font-medium">Seite</th>
-                  <th className="py-3 px-4 font-medium">Entry</th>
-                  <th className="py-3 px-4 font-medium">Margin</th>
-                  <th className="py-3 px-4 font-medium">Size</th>
-                  <th className="py-3 px-4 font-medium">PNL</th>
-                  <th className="py-3 px-4 font-medium">Funding</th>
-                  <th className="py-3 px-4 font-medium">Geöffnet</th>
-                  <th className="py-3 px-4 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading && <SkeletonTableRows columns={10} rows={4} />}
-                {filtered.map((t) => (
-                  <tr key={t.id} className="border-b border-white/[0.06] last:border-0 hover:bg-white/[0.04] transition-colors">
-                    <td className="py-3 px-4 text-ink-100 font-medium">
-                      <div className="flex items-center gap-2">
-                        <AssetIcon symbol={t.coin} assetClass="crypto" />
-                        <span>{t.coin}</span>
-                        {t.leverage != null && <span className="text-xs font-normal text-ink-400 tabular">{t.leverage}x</span>}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-ink-400">{t.connectionLabel || '—'}</td>
-                    <td className="py-3 px-4">
-                      <span className={`uppercase text-xs tracking-wide ${t.side === 'long' ? 'text-up' : 'text-down'}`}>{t.side}</span>
-                    </td>
-                    <td className="py-3 px-4 tabular text-ink-400">{t.entryPrice.toLocaleString('en-US', { maximumFractionDigits: 4 })}</td>
-                    <td className="py-3 px-4 tabular text-ink-400">{t.margin != null ? usd(t.margin) : '—'}</td>
-                    <td className="py-3 px-4 tabular text-ink-400">{qty(t.size, 4)}</td>
-                    <td className={`py-3 px-4 tabular font-medium ${t.pnl >= 0 ? 'text-up' : 'text-down'}`}>
-                      {usd(t.pnl)}
-                      {pnlPct(t) != null && <span className="ml-1.5 text-xs font-normal opacity-70">({fmtPct(pnlPct(t)!)})</span>}
-                      {liquidationRisk(t) && (
-                        <span
-                          className={`ml-1.5 text-xs align-middle ${LIQUIDATION_RISK_STYLE[liquidationRisk(t)!]}`}
-                          title={`${LIQUIDATION_RISK_LABEL[liquidationRisk(t)!]} (${liquidationDistancePct(t)!.toFixed(1)}% Abstand)`}
-                        >
-                          ⚠
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 tabular text-ink-400">{t.fundingFee != null ? usd(t.fundingFee) : '—'}</td>
-                    <td className="py-3 px-4 tabular text-ink-400">{fmtDate(t.openedAt)}</td>
-                    <td className="py-3 px-4">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedTrade(t)}
-                        className={`glass-pill px-2.5 py-1 text-[10px] uppercase tracking-widest cursor-pointer hover:opacity-80 transition-opacity ${t.status === 'open' ? 'glass-pill-signal' : ''}`}
-                      >
-                        {t.status === 'open' ? 'Offen' : 'Geschlossen'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {/* Monthly performance + key figures */}
+          <div className="flex flex-col gap-3 md:gap-4">
+            <section className="card rise-in p-4 md:p-5" style={{ ['--i' as string]: 5 }}>
+              <div className="flex items-start justify-between gap-3 px-1">
+                <div>
+                  <h2 className="text-[15px] font-medium text-ink-900">Monatliche Performance</h2>
+                  <p className="mt-0.5 text-[12px] text-ink-500">Realisierter PnL der letzten sechs Monate</p>
+                </div>
+                <PillSelect
+                  label="Kennzahl"
+                  value={barMetric}
+                  onChange={(v) => setBarMetric(v as 'pnl' | 'count')}
+                  options={[
+                    ['pnl', 'PnL'],
+                    ['count', 'Anzahl']
+                  ]}
+                />
+              </div>
+              <div className="mt-5 px-1">
+                {loading ? <Skeleton className="h-52 w-full rounded-2xl" /> : <MonthlyBars trades={allClosed} hideValues={hideValues} metric={barMetric} />}
+              </div>
+            </section>
 
-          {!loading && filtered.length === 0 && (
-            <div className="py-16 text-center text-ink-400 text-sm">
-              {trades.length === 0 ? 'Noch keine Trades synced. Klicke auf "Sync now".' : 'Keine Trades in diesem Filter.'}
-            </div>
-          )}
+            <section className="card rise-in p-4 md:p-5" style={{ ['--i' as string]: 6 }}>
+              <div className="flex items-baseline justify-between gap-3 px-1">
+                <h2 className="text-[15px] font-medium text-ink-900">Kennzahlen</h2>
+                <span className="text-[12px] text-ink-500">{range === 'all' ? 'All-Time' : RANGE_LABEL[range]}</span>
+              </div>
+              <dl className="mt-4 grid grid-cols-3 gap-2">
+                <KeyFigure label="Win Rate" loading={loading} value={`${stats.winRate.toFixed(1)}%`} tone="teal" />
+                <KeyFigure label="Profit Factor" loading={loading} value={stats.profitFactor === Infinity ? '∞' : stats.profitFactor.toFixed(2)} tone="teal" />
+                <KeyFigure label="Ø Haltedauer" loading={loading} value={fmtDurationMs(stats.avgDurationMs)} />
+                <KeyFigure label="Ø Gewinn" loading={loading} value={usd(stats.avgWin)} tone="up" />
+                <KeyFigure label="Ø Verlust" loading={loading} value={usd(-stats.avgLoss)} tone="down" />
+                <KeyFigure label="Offen / Zu" loading={loading} value={`${stats.open} / ${stats.closed}`} />
+                <KeyFigure label="Bester Trade" loading={loading} value={usd(stats.best)} tone={stats.best >= 0 ? 'up' : 'down'} />
+                <KeyFigure label="Schlechtester" loading={loading} value={usd(stats.worst)} tone={stats.worst >= 0 ? 'up' : 'down'} />
+                <KeyFigure label="Gebühren" loading={loading} value={usd(-statsScoped.reduce((s, t) => s + t.fee, 0))} />
+              </dl>
+            </section>
+          </div>
         </div>
       </div>
 
       {selectedTrade && <TradeDetailModal trade={selectedTrade} usd={usd} qty={qty} onClose={() => setSelectedTrade(null)} />}
     </div>
   )
+}
+
+const RANGE_LABEL: Record<Exclude<Range, 'all'>, string> = {
+  '30d': '30 Tage',
+  '7d': '7 Tage',
+  '24h': '24 Stunden'
 }
 
 function TradeDetailModal({
@@ -878,89 +976,207 @@ function TradeDetailModal({
 }) {
   const roe = pnlPct(t)
   const risk = liquidationRisk(t)
-  const rows: [string, React.ReactNode][] = [
-    ['Coin', t.coin],
-    ['Quelle', t.connectionLabel || '—'],
-    ['Seite', t.side === 'long' ? 'Long' : 'Short'],
-    ['Status', t.status === 'open' ? 'Offen' : 'Geschlossen'],
-    ['Leverage', t.leverage != null ? `${t.leverage}x` : '—'],
-    ['Entry-Preis', t.entryPrice.toLocaleString('en-US', { maximumFractionDigits: 4 })],
-    ['Exit-Preis', t.exitPrice != null ? t.exitPrice.toLocaleString('en-US', { maximumFractionDigits: 4 }) : '—'],
-    ['Mark-Preis', t.markPrice != null ? t.markPrice.toLocaleString('en-US', { maximumFractionDigits: 4 }) : '—'],
-    ['Liquidationspreis', t.liquidationPrice != null ? t.liquidationPrice.toLocaleString('en-US', { maximumFractionDigits: 4 }) : '—'],
-    ['Size', qty(t.size, 6)],
-    ['Notional', usd(t.notional)],
-    ['Margin (Isolated)', t.margin != null ? usd(t.margin) : '—'],
-    ['PnL (live/unrealisiert)', <span className={t.pnl >= 0 ? 'text-up' : 'text-down'}>{usd(t.pnl)}</span>],
-    ...(t.realizedPnl != null
-      ? ([['Bereits realisiert', <span className={t.realizedPnl >= 0 ? 'text-up' : 'text-down'}>{usd(t.realizedPnl)}</span>]] as [string, React.ReactNode][])
-      : []),
-    ['ROE', roe != null ? <span className={roe >= 0 ? 'text-up' : 'text-down'}>{fmtPct(roe)}</span> : '—'],
-    ['Funding', t.fundingFee != null ? usd(t.fundingFee) : '—'],
-    ['Gebühren', usd(t.fee)],
-    ['Fills', String(t.fillsCount)],
-    ['Geöffnet', fmtDate(t.openedAt)],
-    ['Geschlossen', fmtDate(t.closedAt)]
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    window.addEventListener('keydown', onKey)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prev
+    }
+  }, [onClose])
+
+  const price = (n: number | null) => (n != null ? n.toLocaleString('en-US', { maximumFractionDigits: 4 }) : '—')
+  const signed = (n: number) => <span className={n >= 0 ? 'text-up' : 'text-down'}>{usd(n)}</span>
+  const groups: { title: string; rows: [string, React.ReactNode][] }[] = [
+    {
+      title: 'Position',
+      rows: [
+        ['Quelle', t.connectionLabel || '—'],
+        ['Status', t.status === 'open' ? 'Offen' : 'Geschlossen'],
+        ['Leverage', t.leverage != null ? `${t.leverage}x` : '—'],
+        ['Size', qty(t.size, 6)],
+        ['Notional', usd(t.notional)],
+        ['Margin (Isolated)', t.margin != null ? usd(t.margin) : '—']
+      ]
+    },
+    {
+      title: 'Preise',
+      rows: [
+        ['Entry', price(t.entryPrice)],
+        ['Exit', price(t.exitPrice)],
+        ['Mark', price(t.markPrice)],
+        ['Liquidation', price(t.liquidationPrice)]
+      ]
+    },
+    {
+      title: 'Ergebnis',
+      rows: [
+        ['PnL (live/unrealisiert)', signed(t.pnl)],
+        ...(t.realizedPnl != null ? ([['Bereits realisiert', signed(t.realizedPnl)]] as [string, React.ReactNode][]) : []),
+        ['ROE', roe != null ? <span className={roe >= 0 ? 'text-up' : 'text-down'}>{fmtPct(roe)}</span> : '—'],
+        ['Funding', t.fundingFee != null ? usd(t.fundingFee) : '—'],
+        ['Gebühren', usd(t.fee)],
+        ['Fills', String(t.fillsCount)],
+        ['Geöffnet', fmtDate(t.openedAt)],
+        ['Geschlossen', fmtDate(t.closedAt)]
+      ]
+    }
   ]
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-4 bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-4 bg-ink-950/35 backdrop-blur-[3px]"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label={`Trade-Details ${t.coin}`}
     >
       <div
-        className="glass-panel animate-sheet-up w-full md:max-w-md max-h-[88dvh] md:max-h-[85vh] overflow-y-auto overscroll-contain !rounded-b-none md:!rounded-3xl !bg-ink-900/85 md:!bg-white/[0.06] px-5 pt-2 md:pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] md:pb-5"
+        className="card animate-sheet-up w-full md:max-w-[440px] max-h-[88dvh] md:max-h-[85vh] overflow-y-auto overscroll-contain rounded-b-none md:rounded-3xl bg-ink-50 px-4 md:px-5 pt-2 md:pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] md:pb-5"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="md:hidden mx-auto mb-2 h-1 w-10 rounded-full bg-white/25" aria-hidden="true" />
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
-            <AssetIcon symbol={t.coin} assetClass="crypto" />
-            <h3 className="text-ink-100 font-medium">{t.coin}</h3>
-            {risk && (
-              <span className={`text-xs ${LIQUIDATION_RISK_STYLE[risk]}`} title={LIQUIDATION_RISK_LABEL[risk]}>
-                ⚠ {LIQUIDATION_RISK_LABEL[risk]}
-              </span>
-            )}
+        <div className="md:hidden mx-auto mb-3 h-1 w-10 rounded-full bg-ink-200" aria-hidden="true" />
+        <div className="flex items-start justify-between gap-3 px-1">
+          <div className="flex items-center gap-3 min-w-0">
+            <AssetIcon symbol={t.coin} assetClass="crypto" size="lg" />
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h3 className="text-[17px] text-ink-900">{t.coin}</h3>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em] ${
+                    t.side === 'long' ? 'bg-up-soft text-up' : 'bg-down-soft text-down'
+                  }`}
+                >
+                  {t.side}
+                  {t.leverage != null && ` ${t.leverage}x`}
+                </span>
+              </div>
+              <div className={`mt-0.5 text-[22px] tracking-[-0.02em] tabular ${t.pnl >= 0 ? 'text-up' : 'text-down'}`}>
+                {usd(t.pnl)}
+                {roe != null && <span className="ml-2 text-[13px] opacity-75">{fmtPct(roe)}</span>}
+              </div>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Schließen"
-            className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-400 hover:text-ink-100 active:bg-white/[0.08] transition-colors"
-          >
+          <button type="button" onClick={onClose} aria-label="Schließen" className="pill -mr-1 h-11 w-11 shrink-0 text-ink-600">
             <CloseIcon />
           </button>
         </div>
-        <dl className="text-sm divide-y divide-white/[0.06]">
-          {rows.map(([label, value]) => (
-            <div key={label} className="flex items-center justify-between py-2.5 md:py-2 gap-4">
-              <dt className="text-ink-400">{label}</dt>
-              <dd className="tabular text-ink-100 text-right">{value}</dd>
-            </div>
-          ))}
-        </dl>
+        {risk && (
+          <div className={`mt-4 flex items-center gap-2 rounded-2xl px-3.5 py-2.5 text-[13px] ${risk === 'caution' ? 'bg-amber-soft text-amber' : 'bg-down-soft text-down'}`}>
+            <AlertIcon size={15} />
+            {LIQUIDATION_RISK_LABEL[risk]}
+            {liquidationDistancePct(t) != null && ` · ${liquidationDistancePct(t)!.toFixed(1)}% Abstand`}
+          </div>
+        )}
+        {groups.map((g) => (
+          <div key={g.title} className="mt-4">
+            <div className="px-1 text-[11px] uppercase tracking-[0.12em] text-ink-400">{g.title}</div>
+            <dl className="card-row mt-2 divide-y divide-ink-100 px-3.5 text-[14px]">
+              {g.rows.map(([label, value]) => (
+                <div key={label} className="flex items-center justify-between gap-4 py-2.5">
+                  <dt className="text-ink-500">{label}</dt>
+                  <dd className="text-right text-ink-900 tabular">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        ))}
       </div>
     </div>
   )
 }
 
-function EyeToggle({ hideValues, onToggle }: { hideValues: boolean; onToggle: () => void }) {
-  const label = hideValues ? 'Geldwerte anzeigen' : 'Geldwerte verbergen'
+/**
+ * Glides to an in-page section instead of the browser's instant hash jump. The hash is still
+ * written to the URL (without a second jump) so the link stays shareable and Back works.
+ * Users who ask for reduced motion get the instant jump.
+ */
+function scrollToSection(e: React.MouseEvent<HTMLAnchorElement>, href: string) {
+  const target = document.querySelector(href)
+  if (!target) return
+  e.preventDefault()
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  target.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
+  history.replaceState(null, '', href)
+}
+
+function NavPill({ href, active, icon, children }: { href: string; active: boolean; icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className="glass-pill h-11 w-11 md:h-auto md:w-auto md:px-3 md:py-2 text-ink-100"
-      aria-label={label}
-      aria-pressed={!hideValues}
-      title={label}
+    <a
+      href={href}
+      onClick={(e) => scrollToSection(e, href)}
+      aria-current={active ? 'true' : undefined}
+      className={`flex h-10 items-center gap-2 rounded-full px-4 text-[13px] transition-colors ${
+        active ? 'bg-white/[0.16] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.14)]' : 'text-white/70 hover:text-white hover:bg-white/[0.06]'
+      }`}
     >
-      <EyeIcon open={!hideValues} />
-    </button>
+      {icon}
+      {children}
+    </a>
+  )
+}
+
+/** A native <select> dressed as a capsule, so phones still get their own picker. */
+function PillSelect({
+  label,
+  value,
+  onChange,
+  options,
+  size = 'md'
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  options: [string, string][]
+  size?: 'md' | 'sm'
+}) {
+  return (
+    <label className={`pill relative shrink-0 cursor-pointer ${size === 'sm' ? 'h-9 pl-3.5 pr-8 text-[12px]' : 'h-10 pl-4 pr-9 text-[13px]'}`}>
+      <span className="sr-only">{label}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="absolute inset-0 h-full w-full cursor-pointer appearance-none opacity-0"
+        aria-label={label}
+      >
+        {options.map(([v, l]) => (
+          <option key={v} value={v}>
+            {l}
+          </option>
+        ))}
+      </select>
+      <span className="pointer-events-none whitespace-nowrap text-ink-800">{options.find(([v]) => v === value)?.[1] ?? value}</span>
+      <span className={`pointer-events-none absolute top-1/2 -translate-y-1/2 text-ink-500 ${size === 'sm' ? 'right-2.5' : 'right-3'}`}>
+        <ChevronIcon up={false} />
+      </span>
+    </label>
+  )
+}
+
+function IconChip({ children }: { children: React.ReactNode }) {
+  return <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-ink-100 bg-white text-teal-800 shadow-card">{children}</span>
+}
+
+function MiniFigure({ label, value, loading }: { label: string; value: string; loading: boolean }) {
+  return (
+    <div className="min-w-0 px-3.5">
+      <div className="text-[11px] text-ink-500">{label}</div>
+      {loading ? <Skeleton className="mt-1.5 h-4 w-20" /> : <div className="mt-0.5 truncate text-[15px] text-ink-900 tabular">{value}</div>}
+    </div>
+  )
+}
+
+function KeyFigure({ label, value, loading, tone = 'bone' }: { label: string; value: string; loading: boolean; tone?: 'bone' | 'teal' | 'up' | 'down' }) {
+  return (
+    <div className="card-row min-w-0 px-3 py-2.5">
+      <dt className="truncate text-[11px] text-ink-500">{label}</dt>
+      <dd className="mt-1 min-w-0 truncate">
+        {loading ? <Skeleton className="h-4 w-14" /> : <FlipValue value={value} size="sm" tone={tone} />}
+      </dd>
+    </div>
   )
 }
 
@@ -970,15 +1186,100 @@ const ICON_PROPS = {
   viewBox: '0 0 24 24',
   fill: 'none',
   stroke: 'currentColor',
-  strokeWidth: 2,
+  strokeWidth: 1.8,
   strokeLinecap: 'round' as const,
   strokeLinejoin: 'round' as const,
   'aria-hidden': true
 }
 
-function GearIcon() {
+/** Brand mark: two candlesticks, one up one down, drawn as open strokes. */
+function BrandMark() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+      <path d="M9 4v4M9 20v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <rect x="5.5" y="8" width="7" height="12" rx="2.5" fill="currentColor" />
+      <path d="M19 3v6M19 17v8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.65" />
+      <rect x="15.5" y="9" width="7" height="8" rx="2.5" stroke="currentColor" strokeWidth="2" opacity="0.65" />
+    </svg>
+  )
+}
+
+function OverviewIcon() {
   return (
     <svg {...ICON_PROPS}>
+      <rect x="3.5" y="3.5" width="7" height="7" rx="2" />
+      <rect x="13.5" y="3.5" width="7" height="7" rx="2" />
+      <rect x="3.5" y="13.5" width="7" height="7" rx="2" />
+      <rect x="13.5" y="13.5" width="7" height="7" rx="2" />
+    </svg>
+  )
+}
+
+function PieIcon() {
+  return (
+    <svg {...ICON_PROPS}>
+      <path d="M12 3a9 9 0 1 0 9 9h-9z" />
+      <path d="M15 3.5A9 9 0 0 1 20.5 9H15z" />
+    </svg>
+  )
+}
+
+function PulseIcon() {
+  return (
+    <svg {...ICON_PROPS}>
+      <path d="M3 12h4l2.5-6 5 12 2.5-6h4" />
+    </svg>
+  )
+}
+
+function WalletIcon() {
+  return (
+    <svg {...ICON_PROPS} width={18} height={18}>
+      <path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H17a1 1 0 0 1 1 1v2" />
+      <path d="M4 7.5v9A2.5 2.5 0 0 0 6.5 19H19a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H6.5A2.5 2.5 0 0 1 4 7.5z" />
+      <circle cx="16" cy="13.5" r="1.2" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+function TrendIcon({ down }: { down: boolean }) {
+  return (
+    <svg {...ICON_PROPS} width={14} height={14} className={down ? 'text-down' : 'text-up'}>
+      {down ? (
+        <>
+          <path d="M3 7l6 6 4-4 8 8" />
+          <path d="M15 17h6v-6" />
+        </>
+      ) : (
+        <>
+          <path d="M3 17l6-6 4 4 8-8" />
+          <path d="M15 7h6v6" />
+        </>
+      )}
+    </svg>
+  )
+}
+
+function SparkIcon() {
+  return (
+    <svg {...ICON_PROPS} width={14} height={14}>
+      <path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6" />
+    </svg>
+  )
+}
+
+function AlertIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg {...ICON_PROPS} width={size} height={size}>
+      <path d="M10.3 3.9 2.6 17.5A2 2 0 0 0 4.3 20.5h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+      <path d="M12 9.5v4M12 17h.01" />
+    </svg>
+  )
+}
+
+function GearIcon() {
+  return (
+    <svg {...ICON_PROPS} width={18} height={18}>
       <circle cx="12" cy="12" r="3" />
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
     </svg>
@@ -987,7 +1288,7 @@ function GearIcon() {
 
 function SyncIcon({ spinning }: { spinning: boolean }) {
   return (
-    <svg {...ICON_PROPS} width={14} height={14} className={`md:hidden ${spinning ? 'animate-spin' : ''}`}>
+    <svg {...ICON_PROPS} width={15} height={15} className={spinning ? 'animate-spin' : ''}>
       <path d="M21 12a9 9 0 0 1-15.36 6.36L3 16" />
       <path d="M3 12a9 9 0 0 1 15.36-6.36L21 8" />
       <path d="M21 3v5h-5" />
@@ -1015,78 +1316,10 @@ function CloseIcon() {
 
 function EyeIcon({ open }: { open: boolean }) {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg {...ICON_PROPS} width={18} height={18}>
       <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
       <circle cx="12" cy="12" r="3" />
       {!open && <line x1="3" y1="3" x2="21" y2="21" />}
     </svg>
-  )
-}
-
-function SectionHeader({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex items-center gap-3 mb-4">
-      <h2 className="text-sm uppercase tracking-[0.2em] text-ink-100 shrink-0">{children}</h2>
-      <div className="h-px flex-1 bg-white/10" />
-    </div>
-  )
-}
-
-function StatModule({
-  label,
-  loading = false,
-  size = 'lg',
-  className = '',
-  children
-}: {
-  label: string
-  loading?: boolean
-  className?: string
-  /** Matches the FlipValue size inside so the skeleton holds the same height. */
-  size?: 'lg' | 'md'
-  children: React.ReactNode
-}) {
-  return (
-    <div className={`glass-panel min-w-0 px-3.5 py-3.5 md:px-4 md:py-4 flex flex-col gap-1.5 md:gap-2 ${className}`}>
-      <span className="text-[10px] uppercase tracking-wider md:tracking-widest text-ink-400 truncate">{label}</span>
-      {loading ? (
-        size === 'lg' ? (
-          <Skeleton className="h-7 sm:h-9 md:h-10 w-3/4 rounded-xl" />
-        ) : (
-          <Skeleton className="h-7 w-1/2 rounded-lg" />
-        )
-      ) : (
-        children
-      )}
-    </div>
-  )
-}
-
-function FilterSelect({
-  label,
-  value,
-  onChange,
-  options
-}: {
-  label: string
-  value: string
-  onChange: (v: string) => void
-  options: [string, string][]
-}) {
-  return (
-    <label className="flex min-w-0 flex-col gap-1 text-xs text-ink-400 md:flex-row md:items-center md:gap-2">
-      <span className="uppercase tracking-widest text-[10px] md:text-xs">{label}</span>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-11 w-full md:h-auto md:w-auto bg-white/[0.05] border border-white/[0.12] rounded-full px-3.5 md:px-3 md:py-1.5 text-ink-100 focus:outline-none focus:border-signal/50"
-      >
-        {options.map(([v, l]) => (
-          <option key={v} value={v} className="bg-ink-900">
-            {l}
-          </option>
-        ))}
-      </select>
-    </label>
   )
 }

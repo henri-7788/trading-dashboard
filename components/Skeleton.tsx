@@ -3,12 +3,12 @@ export default function Skeleton({ className = '' }: { className?: string }) {
   return <span aria-hidden="true" className={`skeleton block ${className}`} />
 }
 
-/** Placeholder rows for a glass table while its data is still loading. */
+/** Placeholder rows for a table while its data is still loading. */
 export function SkeletonTableRows({ columns, rows = 5 }: { columns: number; rows?: number }) {
   return (
     <>
       {Array.from({ length: rows }, (_, r) => (
-        <tr key={r} className="border-b border-white/[0.06] last:border-0">
+        <tr key={r} className="border-b border-ink-100 last:border-0">
           {Array.from({ length: columns }, (_, c) => (
             <td key={c} className="py-3.5 px-4">
               {c === 0 ? (

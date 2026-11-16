@@ -144,22 +144,25 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <div className="min-h-screen pb-16" aria-busy="true" aria-label="Lade Einstellungen">
-        <div className="max-w-3xl mx-auto px-3 sm:px-4 md:px-6 pt-[max(0.75rem,env(safe-area-inset-top))] md:pt-8">
-          <header className="glass-panel px-4 py-3.5 md:px-5 md:py-4 mb-5 md:mb-6 flex items-center justify-between gap-3 md:gap-4">
-            <div className="min-w-0">
-              <h1 className="text-base font-semibold text-ink-100">Einstellungen</h1>
-              <p className="text-xs text-ink-400 mt-1">Verbindungen &amp; manuelle Positionen</p>
-            </div>
-            <Link href="/" className="glass-pill shrink-0 whitespace-nowrap h-11 md:h-auto px-4 md:py-2 text-sm md:text-xs font-medium">
-              ← Dashboard
+        <div className="max-w-3xl mx-auto px-3 sm:px-5 md:px-8 pt-[max(0.5rem,env(safe-area-inset-top))] md:pt-5">
+<header className="mb-8 md:mb-10 text-white">
+          <div className="flex h-14 items-center justify-between gap-3">
+            <Link href="/" className="pill-on-dark h-11 shrink-0 whitespace-nowrap pl-3.5 pr-4 text-sm">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+              Dashboard
             </Link>
-          </header>
+          </div>
+          <h1 className="mt-6 md:mt-10 text-[2rem] md:text-[2.75rem] font-normal leading-[1.05] tracking-[-0.035em]">Einstellungen</h1>
+          <p className="mt-3 max-w-[48ch] text-[15px] leading-relaxed text-white/75">Verbindungen zu Börsen und Wallets sowie manuell erfasste Aktien und ETFs.</p>
+        </header>
           {[2, 3].map((count, section) => (
-            <section key={section} className="mb-8">
-              <Skeleton className="h-3 w-48 mb-4" />
-              <div className="flex flex-col gap-3">
+            <section key={section} className="card p-4 md:p-5 mb-4">
+              <Skeleton className="h-4 w-40 mb-4" />
+              <div className="flex flex-col gap-2">
                 {Array.from({ length: count }, (_, i) => (
-                  <div key={i} className="glass-panel px-4 py-4 flex items-center justify-between gap-4">
+                  <div key={i} className="card-row px-4 py-4 flex items-center justify-between gap-4">
                     <div className="flex flex-col gap-2 min-w-0 flex-1">
                       <Skeleton className="h-3.5 w-40" />
                       <Skeleton className="h-3 w-64 max-w-full" />
@@ -177,20 +180,23 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen pb-16">
-      <div className="max-w-3xl mx-auto px-3 sm:px-4 md:px-6 pt-[max(0.75rem,env(safe-area-inset-top))] md:pt-8">
-        <header className="glass-panel px-4 py-3.5 md:px-5 md:py-4 mb-5 md:mb-6 flex items-center justify-between gap-3 md:gap-4">
-          <div className="min-w-0">
-            <h1 className="text-base font-semibold text-ink-100">Einstellungen</h1>
-            <p className="text-xs text-ink-400 mt-1">Verbindungen &amp; manuelle Positionen</p>
+      <div className="max-w-3xl mx-auto px-3 sm:px-5 md:px-8 pt-[max(0.5rem,env(safe-area-inset-top))] md:pt-5">
+<header className="mb-8 md:mb-10 text-white">
+          <div className="flex h-14 items-center justify-between gap-3">
+            <Link href="/" className="pill-on-dark h-11 shrink-0 whitespace-nowrap pl-3.5 pr-4 text-sm">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+              Dashboard
+            </Link>
           </div>
-          <Link href="/" className="glass-pill shrink-0 whitespace-nowrap h-11 md:h-auto px-4 md:py-2 text-sm md:text-xs font-medium">
-            ← Dashboard
-          </Link>
+          <h1 className="mt-6 md:mt-10 text-[2rem] md:text-[2.75rem] font-normal leading-[1.05] tracking-[-0.035em]">Einstellungen</h1>
+          <p className="mt-3 max-w-[48ch] text-[15px] leading-relaxed text-white/75">Verbindungen zu Börsen und Wallets sowie manuell erfasste Aktien und ETFs.</p>
         </header>
 
-        {error && <div className="glass-panel-tight mb-6 px-4 py-3 text-sm text-down border-down/25">{error}</div>}
+        {error && <div className="card-tight mb-6 px-4 py-3 text-sm text-down border-down/25">{error}</div>}
         {notice && (
-          <div className="glass-panel-tight mb-6 px-4 py-3 text-sm text-up border-up/25 flex items-center justify-between">
+          <div className="card-tight mb-6 px-4 py-3 text-sm text-up border-up/25 flex items-center justify-between">
             {notice}
             <button onClick={() => setNotice(null)} className="text-up/70 hover:text-up ml-4">
               ✕
@@ -199,34 +205,35 @@ export default function SettingsPage() {
         )}
 
         {/* Connections */}
-        <section className="mb-8">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xs uppercase tracking-widest text-ink-400">Verbindungen</h2>
+        <section className="card p-4 md:p-5 mb-4">
+          <div className="mb-4 px-1">
+            <h2 className="text-[15px] font-medium text-ink-900">Verbindungen</h2>
+            <p className="mt-0.5 text-[12px] text-ink-500">Börsen per API-Key, Hyperliquid per Wallet-Adresse. Wird bei jedem Sync abgefragt.</p>
           </div>
 
-          <div className="flex flex-col gap-3 mb-3">
+          <div className="flex flex-col gap-2 mb-3">
             {connections.length === 0 && (
-              <div className="glass-panel px-4 py-6 text-center text-ink-400 text-sm">
+              <div className="card-row px-4 py-6 text-center text-ink-500 text-sm">
                 Noch keine Verbindung. Füge Hyperliquid oder eine Börse hinzu, um Trades und Bestände zu synchronisieren.
               </div>
             )}
             {connections.map((c) => (
-              <div key={c.id} className="glass-panel px-4 py-3 flex items-center justify-between gap-4">
+              <div key={c.id} className="card-row px-4 py-3 flex items-center justify-between gap-4">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="glass-pill px-2 py-0.5 text-[10px] uppercase tracking-widest">
+                    <span className="pill px-2 py-0.5 text-[10px] uppercase tracking-widest">
                       {c.type === 'hyperliquid' ? 'Hyperliquid' : c.exchangeId}
                     </span>
-                    <span className="text-sm text-ink-100 truncate">{c.label}</span>
+                    <span className="text-sm text-ink-900 truncate">{c.label}</span>
                   </div>
-                  <p className="text-xs text-ink-400 mt-1 truncate">
+                  <p className="text-xs text-ink-500 mt-1 truncate">
                     {c.type === 'hyperliquid' ? c.walletAddress : c.apiKeyPreview ? `API-Key ${c.apiKeyPreview}` : 'kein API-Key'}
                   </p>
                 </div>
                 <button
                   onClick={() => removeConnection(c.id, c.label)}
                   disabled={busy}
-                  className="glass-pill glass-pill-down shrink-0 h-10 md:h-auto px-3.5 md:px-3 md:py-1.5 text-xs font-medium disabled:opacity-50"
+                  className="pill pill-danger shrink-0 h-10 md:h-auto px-3.5 md:px-3 md:py-1.5 text-xs font-medium disabled:opacity-50"
                 >
                   Entfernen
                 </button>
@@ -237,13 +244,13 @@ export default function SettingsPage() {
           <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap">
             <button
               onClick={() => setShowAddConnection(showAddConnection === 'hyperliquid' ? null : 'hyperliquid')}
-              className="glass-pill glass-pill-signal h-11 md:h-auto px-4 md:py-2 text-xs font-medium"
+              className="pill pill-primary h-11 md:h-auto px-4 md:py-2 text-xs font-medium"
             >
               + Hyperliquid Wallet
             </button>
             <button
               onClick={() => setShowAddConnection(showAddConnection === 'ccxt' ? null : 'ccxt')}
-              className="glass-pill glass-pill-signal h-11 md:h-auto px-4 md:py-2 text-xs font-medium"
+              className="pill pill-primary h-11 md:h-auto px-4 md:py-2 text-xs font-medium"
             >
               + Börse (API-Key)
             </button>
@@ -275,14 +282,15 @@ export default function SettingsPage() {
         </section>
 
         {/* Manual positions */}
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xs uppercase tracking-widest text-ink-400">Manuelle Positionen (Aktien, ETFs, …)</h2>
+        <section className="card p-4 md:p-5">
+          <div className="mb-4 px-1">
+            <h2 className="text-[15px] font-medium text-ink-900">Manuelle Positionen</h2>
+            <p className="mt-0.5 text-[12px] text-ink-500">Käufe und Verkäufe von Aktien, ETFs und allem ohne Börsen-API.</p>
           </div>
 
-          <div className="glass-panel overflow-hidden mb-3">
+          <div className="card-row overflow-hidden mb-3">
             {transactions.filter((t) => t.editable).length === 0 ? (
-              <div className="py-10 text-center text-ink-400 text-sm">Noch keine manuellen Käufe/Verkäufe erfasst.</div>
+              <div className="py-10 text-center text-ink-500 text-sm">Noch keine manuellen Käufe/Verkäufe erfasst.</div>
             ) : (
               <>
               {/* Phones: symbol + side/date left, quantity × price right, delete as its own tap target. */}
@@ -290,20 +298,20 @@ export default function SettingsPage() {
                 {transactions
                   .filter((t) => t.editable)
                   .map((t) => (
-                    <li key={t.id} className="flex items-center gap-3 pl-4 pr-1.5 py-2.5 border-b border-white/[0.06] last:border-0">
+                    <li key={t.id} className="flex items-center gap-3 pl-4 pr-1.5 py-2.5 border-b border-ink-100 last:border-0">
                       <div className="min-w-0 flex-1">
-                        <div className="text-sm text-ink-100 font-medium truncate">{t.symbol}</div>
+                        <div className="text-sm text-ink-900 font-medium truncate">{t.symbol}</div>
                         <div className="text-xs mt-0.5 truncate">
                           <span className={`uppercase tracking-wide ${t.side === 'buy' ? 'text-up' : 'text-down'}`}>{t.side === 'buy' ? 'Kauf' : 'Verkauf'}</span>
-                          <span className="text-ink-400">
+                          <span className="text-ink-500">
                             {' · '}
                             {ASSET_CLASS_LABEL[t.assetClass]} · {new Date(t.executedAt).toLocaleDateString('de-DE')}
                           </span>
                         </div>
                       </div>
                       <div className="text-right shrink-0 tabular">
-                        <div className="text-sm text-ink-100">{t.quantity}</div>
-                        <div className="text-xs text-ink-400 mt-0.5">à {t.price.toLocaleString('en-US', { maximumFractionDigits: 4 })}</div>
+                        <div className="text-sm text-ink-900">{t.quantity}</div>
+                        <div className="text-xs text-ink-500 mt-0.5">à {t.price.toLocaleString('en-US', { maximumFractionDigits: 4 })}</div>
                       </div>
                       <button
                         onClick={() => removeTransaction(t.id)}
@@ -322,7 +330,7 @@ export default function SettingsPage() {
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-[10px] uppercase tracking-widest text-ink-400 border-b border-white/10">
+                    <tr className="text-left text-[10px] uppercase tracking-widest text-ink-500 border-b border-ink-150">
                       <th className="py-2.5 px-4">Symbol</th>
                       <th className="py-2.5 px-4">Typ</th>
                       <th className="py-2.5 px-4">Seite</th>
@@ -336,17 +344,17 @@ export default function SettingsPage() {
                     {transactions
                       .filter((t) => t.editable)
                       .map((t) => (
-                        <tr key={t.id} className="border-b border-white/[0.06] last:border-0">
-                          <td className="py-2.5 px-4 text-ink-100 font-medium">{t.symbol}</td>
-                          <td className="py-2.5 px-4 text-ink-400">{ASSET_CLASS_LABEL[t.assetClass]}</td>
+                        <tr key={t.id} className="border-b border-ink-100 last:border-0">
+                          <td className="py-2.5 px-4 text-ink-900 font-medium">{t.symbol}</td>
+                          <td className="py-2.5 px-4 text-ink-500">{ASSET_CLASS_LABEL[t.assetClass]}</td>
                           <td className="py-2.5 px-4">
                             <span className={`uppercase text-xs tracking-wide ${t.side === 'buy' ? 'text-up' : 'text-down'}`}>
                               {t.side === 'buy' ? 'Kauf' : 'Verkauf'}
                             </span>
                           </td>
-                          <td className="py-2.5 px-4 tabular text-ink-400">{t.quantity}</td>
-                          <td className="py-2.5 px-4 tabular text-ink-400">{t.price.toLocaleString('en-US', { maximumFractionDigits: 4 })}</td>
-                          <td className="py-2.5 px-4 tabular text-ink-400">{new Date(t.executedAt).toLocaleDateString('de-DE')}</td>
+                          <td className="py-2.5 px-4 tabular text-ink-500">{t.quantity}</td>
+                          <td className="py-2.5 px-4 tabular text-ink-500">{t.price.toLocaleString('en-US', { maximumFractionDigits: 4 })}</td>
+                          <td className="py-2.5 px-4 tabular text-ink-500">{new Date(t.executedAt).toLocaleDateString('de-DE')}</td>
                           <td className="py-2.5 px-4 text-right">
                             <button onClick={() => removeTransaction(t.id)} className="text-down/70 hover:text-down text-xs uppercase tracking-widest">
                               Löschen
@@ -364,11 +372,11 @@ export default function SettingsPage() {
           <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap md:items-center">
             <button
               onClick={() => setShowAddPosition((v) => !v)}
-              className="glass-pill glass-pill-signal h-11 md:h-auto px-4 md:py-2 text-xs font-medium"
+              className="pill pill-primary h-11 md:h-auto px-4 md:py-2 text-xs font-medium"
             >
               + Position erfassen
             </button>
-            <label className="glass-pill glass-pill-signal h-11 md:h-auto px-4 md:py-2 text-xs font-medium cursor-pointer text-center">
+            <label className="pill pill-primary h-11 md:h-auto px-4 md:py-2 text-xs font-medium cursor-pointer text-center">
               {importing ? 'Importiere…' : 'CSV importieren (TradeRepublic)'}
               <input
                 type="file"
@@ -385,8 +393,8 @@ export default function SettingsPage() {
           </div>
 
           {importSummary && (
-            <div className="glass-panel p-4 mt-3 text-sm">
-              <div className="text-ink-100 mb-2">
+            <div className="card-row p-4 mt-3 text-sm">
+              <div className="text-ink-900 mb-2">
                 {importSummary.totalRows} Zeilen gelesen · <span className="text-up">{importSummary.created} neu</span>
                 {importSummary.updated > 0 && <>, {importSummary.updated} aktualisiert</>}
                 {importSummary.invalid > 0 && (
@@ -396,7 +404,7 @@ export default function SettingsPage() {
                 )}
               </div>
               {importSummary.skipped.length > 0 && (
-                <div className="text-ink-400 text-xs">
+                <div className="text-ink-500 text-xs">
                   Nicht importiert (keine Positionsänderung): {importSummary.skipped.map((s) => `${s.count}× ${s.type}`).join(', ')}
                 </div>
               )}
@@ -406,7 +414,7 @@ export default function SettingsPage() {
                   korrigieren.
                 </div>
               )}
-              <button onClick={() => setImportSummary(null)} className="text-ink-400 hover:text-ink-100 text-xs uppercase tracking-widest mt-2">
+              <button onClick={() => setImportSummary(null)} className="text-ink-500 hover:text-ink-900 text-xs uppercase tracking-widest mt-2">
                 Schließen
               </button>
             </div>
@@ -430,7 +438,7 @@ export default function SettingsPage() {
 
 function FormShell({ children, onSubmit }: { children: React.ReactNode; onSubmit: (e: FormEvent) => void }) {
   return (
-    <form onSubmit={onSubmit} className="glass-panel p-4 mt-3 flex flex-col gap-3">
+    <form onSubmit={onSubmit} className="card-row p-4 mt-3 flex flex-col gap-3">
       {children}
     </form>
   )
@@ -439,21 +447,21 @@ function FormShell({ children, onSubmit }: { children: React.ReactNode; onSubmit
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="text-[10px] uppercase tracking-widest text-ink-400">{label}</span>
+      <span className="text-[10px] uppercase tracking-widest text-ink-500">{label}</span>
       {children}
     </label>
   )
 }
 
-const inputClass = 'glass-input text-sm'
+const inputClass = 'field text-sm'
 
 function FormActions({ onCancel, submitLabel, busy }: { onCancel: () => void; submitLabel: string; busy: boolean }) {
   return (
     <div className="grid grid-cols-2 gap-2 pt-1 md:flex md:justify-end">
-      <button type="button" onClick={onCancel} className="glass-pill h-11 md:h-auto px-4 md:py-2 text-xs font-medium text-ink-400 hover:text-ink-100">
+      <button type="button" onClick={onCancel} className="pill h-11 md:h-auto px-4 md:py-2 text-xs font-medium text-ink-500 hover:text-ink-900">
         Abbrechen
       </button>
-      <button type="submit" disabled={busy} className="glass-pill glass-pill-signal h-11 md:h-auto px-4 md:py-2 text-xs font-medium disabled:opacity-50">
+      <button type="submit" disabled={busy} className="pill pill-primary h-11 md:h-auto px-4 md:py-2 text-xs font-medium disabled:opacity-50">
         {busy ? 'Speichern…' : submitLabel}
       </button>
     </div>
@@ -565,7 +573,7 @@ function ExchangeForm({
       <Field label="Trading-Paare für Transaktionshistorie (optional, kommagetrennt, z. B. BTC/USDT,ETH/USDT)">
         <input className={inputClass} placeholder="BTC/USDT,ETH/USDT" value={symbols} onChange={(e) => setSymbols(e.target.value)} />
       </Field>
-      <p className="text-xs text-ink-400 leading-relaxed">
+      <p className="text-xs text-ink-500 leading-relaxed">
         API-Key und Secret werden verschlüsselt gespeichert. Nutze einen Key mit ausschließlich Lese-Rechten (kein Trading/Withdraw).
       </p>
       <FormActions onCancel={onCancel} submitLabel="Verbindung hinzufügen" busy={busy} />
@@ -623,7 +631,7 @@ function TickerAutocomplete({
         required
       />
       {open && suggestions.length > 0 && (
-        <ul className="absolute z-10 top-full left-0 right-0 mt-1 glass-panel-tight max-h-56 overflow-y-auto overflow-hidden">
+        <ul className="absolute z-10 top-full left-0 right-0 mt-1 card-tight max-h-56 overflow-y-auto overflow-hidden">
           {suggestions.map((s) => (
             <li key={`${s.symbol}-${s.exchange}`}>
               <button
@@ -632,11 +640,11 @@ function TickerAutocomplete({
                   onPick(s)
                   setOpen(false)
                 }}
-                className="w-full text-left px-3 py-2 hover:bg-white/[0.06] transition-colors flex items-center justify-between gap-3"
+                className="w-full text-left px-3 py-2 hover:bg-ink-100 transition-colors flex items-center justify-between gap-3"
               >
-                <span className="text-sm text-ink-100">{s.symbol}</span>
-                <span className="text-xs text-ink-400 truncate">{s.name}</span>
-                <span className="text-[10px] uppercase tracking-widest text-ink-400 shrink-0">{s.exchange}</span>
+                <span className="text-sm text-ink-900">{s.symbol}</span>
+                <span className="text-xs text-ink-500 truncate">{s.name}</span>
+                <span className="text-[10px] uppercase tracking-widest text-ink-500 shrink-0">{s.exchange}</span>
               </button>
             </li>
           ))}

@@ -2,19 +2,22 @@ import { useEffect, useRef, useState } from 'react'
 
 interface FlipValueProps {
   value: string
-  size?: 'lg' | 'md' | 'sm'
-  tone?: 'bone' | 'amber' | 'up' | 'down'
+  size?: 'xl' | 'lg' | 'md' | 'sm'
+  tone?: 'bone' | 'amber' | 'up' | 'down' | 'teal' | 'white'
 }
 
 const sizeClasses: Record<string, string> = {
-  lg: 'text-[1.375rem] leading-tight sm:text-3xl md:text-4xl',
+  xl: 'text-[2.25rem] leading-none md:text-[2.75rem]',
+  lg: 'text-[1.625rem] leading-tight md:text-[1.875rem]',
   md: 'text-lg',
   sm: 'text-sm'
 }
 
 const toneClasses: Record<string, string> = {
-  bone: 'text-ink-100',
+  bone: 'text-ink-900',
   amber: 'text-amber',
+  teal: 'text-teal-800',
+  white: 'text-white',
   up: 'text-up',
   down: 'text-down'
 }
@@ -22,6 +25,8 @@ const toneClasses: Record<string, string> = {
 const flashClasses: Record<string, string> = {
   bone: 'value-flash-neutral',
   amber: 'value-flash-neutral',
+  teal: 'value-flash-neutral',
+  white: '',
   up: 'value-flash-up',
   down: 'value-flash-down'
 }
@@ -41,7 +46,7 @@ export default function FlipValue({ value, size = 'md', tone = 'bone' }: FlipVal
   return (
     <span
       key={flashKey}
-      className={`inline-block font-semibold tabular rounded-lg px-0.5 -mx-0.5 ${sizeClasses[size]} ${toneClasses[tone]} ${flashKey > 0 ? flashClasses[tone] : ''}`}
+      className={`inline-block font-normal tracking-[-0.02em] tabular rounded-lg px-0.5 -mx-0.5 ${sizeClasses[size]} ${toneClasses[tone]} ${flashKey > 0 ? flashClasses[tone] : ''}`}
     >
       {value}
     </span>

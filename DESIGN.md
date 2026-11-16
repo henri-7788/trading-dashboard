@@ -1,164 +1,134 @@
 ---
 name: Trading Dashboard
-description: A Liquid Glass portfolio and trading dashboard — frosted, translucent instrument cards floating over a drifting ambient color field.
+description: Petrol & paper — a deep petrol hero band over a cool grey ground, with calm near-white cards and petrol data marks.
 colors:
-  ink-950: "#050609"
-  ink-900: "#0a0c11"
-  ink-850: "#0f121a"
-  ink-800: "#151a23"
-  ink-700: "#1d2330"
-  ink-600: "#2a3242"
-  ink-500: "#5c6577"
-  ink-400: "#8891a3"
-  ink-300: "#aeb6c4"
-  ink-100: "#f2f4f8"
-  signal: "#0a84ff"
-  signal-dim: "#0060df"
-  up: "#32d74b"
-  up-dim: "#1fa834"
-  down: "#ff453a"
-  down-dim: "#d92e24"
-  amber: "#ff9f0a"
-  amber-dim: "#c97800"
+  page: "#edf0f0"
+  ink-50: "#f7f9f9"
+  ink-100: "#eef1f2"
+  ink-150: "#e6eaeb"
+  ink-200: "#dde3e5"
+  ink-300: "#c4cdd0"
+  ink-400: "#94a2a7"
+  ink-500: "#6b7a80"
+  ink-600: "#4c5c62"
+  ink-700: "#33434a"
+  ink-800: "#1f2f36"
+  ink-900: "#10212a"
+  ink-950: "#08161c"
+  teal-50: "#eff6f7"
+  teal-100: "#dceaee"
+  teal-200: "#bcd6de"
+  teal-300: "#8fb9c6"
+  teal-400: "#5e97a9"
+  teal-500: "#3b7b90"
+  teal-600: "#266579"
+  teal-700: "#1a5366"
+  teal-800: "#134456"
+  teal-900: "#0d3646"
+  teal-950: "#082733"
+  up: "#1d8556"
+  up-soft: "#e3f3ea"
+  down: "#c4463c"
+  down-soft: "#fbe9e7"
+  amber: "#b4740f"
+  amber-soft: "#fbf0dc"
 typography:
   ui:
-    fontFamily: "Inter, -apple-system, BlinkMacSystemFont, Segoe UI, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "Geist, -apple-system, BlinkMacSystemFont, Segoe UI, ui-sans-serif, system-ui, sans-serif"
     fontWeight: 400
+  display:
+    fontFamily: "Geist"
+    fontWeight: 400
+    letterSpacing: "-0.035em"
 rounded:
-  sm: "16px"
-  md: "20px"
-  lg: "28px"
+  row: "18px"
+  card: "24px"
   pill: "999px"
 spacing:
-  sm: "8px"
-  md: "16px"
-  lg: "20px"
+  gap-mobile: "12px"
+  gap-desktop: "16px"
+  card-padding: "16px–24px"
 components:
-  panel:
-    backgroundColor: "rgba(255,255,255,0.06)"
-    border: "1px solid rgba(255,255,255,0.10)"
-    backdropBlur: "40px"
-    rounded: "{rounded.lg}"
-  button-primary:
-    backgroundColor: "rgba(10,132,255,0.15)"
-    textColor: "{colors.signal}"
+  card:
+    backgroundColor: "{colors.ink-50}"
+    border: "1px solid #ffffff"
+    rounded: "{rounded.card}"
+    shadow: "0 1px 2px rgba(16,33,42,.04), 0 8px 24px -12px rgba(16,33,42,.10)"
+  card-row:
+    backgroundColor: "#ffffff"
+    border: "1px solid {colors.ink-100}"
+    rounded: "{rounded.row}"
+  pill:
+    backgroundColor: "#ffffff"
+    border: "1px solid {colors.ink-150}"
+    textColor: "{colors.ink-800}"
     rounded: "{rounded.pill}"
-    padding: "8px 16px"
-  button-primary-hover:
-    backgroundColor: "rgba(10,132,255,0.25)"
-  input:
-    backgroundColor: "rgba(255,255,255,0.05)"
-    textColor: "{colors.ink-100}"
-    rounded: "{rounded.md}"
+  pill-primary:
+    backgroundColor: "{colors.teal-800}"
+    textColor: "#ffffff"
+  pill-on-dark:
+    backgroundColor: "rgba(255,255,255,0.06)"
+    border: "1px solid rgba(255,255,255,0.25)"
+    textColor: "#ffffff"
+  pill-on-dark-solid:
+    backgroundColor: "#ffffff"
+    textColor: "{colors.teal-900}"
 ---
 
 # Design System: Trading Dashboard
 
 ## Overview
 
-**Creative North Star: "Liquid Glass"**
+**Creative North Star: "Petrol & paper"**
 
-A private, single-user cockpit for reading portfolio and Hyperliquid performance, rendered as frosted, translucent instrument cards floating over a slow-drifting ambient color field — the Apple visionOS/iOS "Liquid Glass" material register. This replaces the former "Instrument Panel" identity outright at the user's explicit request: the flat graphite terminal, hairline borders, and monospace-heavy Bloomberg/dYdX register are fully retired, not softened. Every panel, button, chip, and input now shares one frosted-glass material — translucent white fill, `backdrop-blur`, a soft white hairline border, an inner sheen, and a diffuse drop shadow — instead of a flat bordered rectangle on solid black.
+A private, single-user cockpit for portfolio and trading performance. The top of every page is a deep petrol band (dark `#0d3646` easing to `#5e97a9`, fading into the grey ground) with a fine white dot screen over it, so the colour reads as printed material. The band carries the brand, section navigation, a large greeting, and the day's actions. Everything below is calm: near-white cards on a cool grey page, with white inset rows inside them.
 
-Density and legibility still outrank decoration — this is an Operate surface, not a marketing page — but the material itself now carries warmth and depth that the old flat instrument-panel language deliberately refused. Numbers still flash briefly on live update, unchanged from before; the change is entirely in what a "panel" is made of.
+Colour is spent in exactly three places: the band, the single **insight card** (same petrol material, or brick red when a position nears liquidation), and the data marks themselves. Green and brick red mean PnL direction and nothing else.
 
-**Key Characteristics:**
-- Frosted glass panels: translucent white fill (`bg-white/6%`), `backdrop-blur-2xl`, hairline white border, inner top sheen, soft outer shadow — no flat, opaque surfaces anywhere
-- A fixed ambient background of three large, slowly drifting blurred color fields (signal blue, up green, amber) behind everything — the material glass panels are meant to refract
-- Fully rounded pill shapes for every button, filter, and status chip; large `20–28px` radii on panels — no small "instrument" corners
-- One consistent sans typeface (Inter) throughout; no monospace face — numeric columns keep `tabular-nums` for alignment without switching families
-- Apple system-palette accents: signal blue, up green, down red, amber — chosen to stay saturated and legible seen through frosted glass
+Adopted 2026-11-16 at the owner's request from a supplied fintech reference (petrol hero, white cards, dot-matrix / segment / hatched-bar charts). It replaces the Liquid Glass identity outright.
+
+**Key characteristics**
+- One saturated band, everything else quiet. No translucent glass, no ambient blobs.
+- Large figures in Geist at *regular* weight with tight tracking. Weight never carries emphasis on numbers; size and colour do.
+- Capsule pills for every control. On the band they are a white hairline ghost or solid white.
+- Charts are drawn from petrol dots, slim segments, and bars, never thick strokes or neon.
 
 ## Colors
 
-Neutral graphite base and ambient color fields; accent color is spent on meaning and on the background atmosphere itself.
-
-### Primary
-- **Signal Blue** (`#0a84ff`): the primary accent — sync button, focus rings, active/open-status chips, ambient background field. Apple's system blue, chosen for how it reads through blur.
-
-### Neutral
-- **Void** (`#050609`, `ink-950`): base page background beneath the ambient gradient.
-- **Panel glass**: not a solid color — `rgba(255,255,255,0.06)` fill over `backdrop-blur-2xl`, so panels always show a hint of the ambient field behind them.
-- **Hairline** (`rgba(255,255,255,0.10–0.12)`): the border on every glass panel, pill, and input — a soft white line, not a graphite one, since the surface is translucent.
-- **Muted Text** (`#8891a3`, `ink-400`): labels, secondary table values.
-- **Primary Text** (`#f2f4f8`, `ink-100`): coin symbols, balances, primary readouts.
-
-### Semantic
-- **Up** (`#32d74b`): positive PNL, long side.
-- **Down** (`#ff453a`): negative PNL, short side, error states.
-- **Amber** (`#ff9f0a`): win rate / profit factor readouts — a third semantic tone reserved for "quality of performance" metrics, distinct from raw PNL direction.
-
-### Named Rules
-**The Glass-Only Surface Rule.** Every container — panel, card, button, input, chip — is a frosted-glass surface (translucent fill + blur + hairline border), never a flat opaque fill. A flat solid-color box is a regression to the retired terminal language.
+- **Page** `#edf0f0`: the ground below the band.
+- **Card** `ink-50` with a white 1px border and a soft two-layer shadow. **Row** pure white with an `ink-100` border, used for list entries inside cards.
+- **Text**: `ink-900` primary, `ink-500` secondary, `ink-400` tertiary and axis labels. On the band: white, `white/75` for body, `white/70` for meta.
+- **Petrol** `teal-*`: primary actions (`teal-800`), chart marks (`teal-800` strong, `teal-300` soft, `teal-100` pale bars), icon chips.
+- **Up / Down** `#1d8556` / `#c4463c` with soft tints `up-soft` / `down-soft` for side badges and pale bars.
+- **Amber** only for the "caution" liquidation tier.
 
 ## Typography
 
-**Font:** Inter (with system-ui fallback) — the only typeface in the system.
-
-**Character:** Inter throughout, at normal weight for body/labels and semibold for primary readouts and headings. The former all-monospace treatment is gone; only numeric table columns and stat readouts keep `tabular-nums` so digits still align in columns, without pulling in a separate monospace face to do it.
-
-### Hierarchy
-- **Instrument value** (semibold, `text-3xl`/`text-4xl`, `tabular`): the stat-module readouts (PNL, win rate, position counts, equity figures).
-- **Body/table** (regular, `text-sm`, `tabular` for numeric columns): trade table cells, filter controls.
-- **Label** (regular, `text-[10px]`–`text-xs`, `tracking-widest`, uppercase): stat-module captions and table headers.
+Geist (via `next/font/google`, variable `--font-ui`) throughout. Display greeting at 32px mobile / 44px desktop, weight 400, tracking −0.035em. Card titles at 15px medium. Key figures use `FlipValue` (`xl` 36/44px, `lg` 26/30px), weight 400, tracking −0.02em, `tabular-nums`. Small meta at 11–13px. No monospace.
 
 ## Layout
 
-Single-column, max-width 6xl (1152px), centered, 12–16px gaps between modules. The account-value row and instrument rows sit above the equity curve, filters, and trade table in the same reading order as before. Density stays constant across breakpoints.
+Max width 1240px. Band → greeting row → a three-card first row (net worth with equity curve · PnL-per-trade dot matrix · insight card) → a three-column second row (allocation · trades · monthly performance + key figures). Below `lg` everything stacks into one column in that order. Phones keep 44px touch targets, 16px form text, safe-area padding, and a bottom-sheet trade detail.
 
 ## Elevation & Depth
 
-Depth is now real, not simulated by a border alone. Every panel sits above the ambient background with a soft outer shadow, a `backdrop-blur` that visibly reveals the drifting color fields, and an inset top-edge sheen (`inset 0 1px rgba(255,255,255,0.14)`) that reads as a glass edge catching light.
-
-### Named Rules
-**The Ambient-Behind-Glass Rule.** A glass panel only reads as glass when something with color and shape sits behind it. The `Background` component's three drifting blurred fields are mounted once, fixed, behind every page — never remove or flatten it, or every panel above it goes back to looking like a plain translucent gray box.
+Flat, quiet elevation: cards use `shadow-card`. The insight card and dark tooltip pills use `shadow-float`. Nothing glows.
 
 ## Shapes
 
-Large, soft radii throughout: `28px` on panels, `20px` on inputs, full pill (`999px`) on every button, filter control, and status chip. Corners are now a material property of the glass, not a quiet structural detail — softness is the point.
+Cards 24px, rows and inputs 18px, every control a full capsule. Icon chips are 44px rounded squares (16px radius) in white.
 
 ## Components
 
-### Buttons / Pills
-- **Shape:** full pill (`rounded-full`), glass fill, hairline white border.
-- **Primary (Sync now, form submit):** `signal`-tinted glass — `bg-signal/15`, `border-signal/30`, `text-signal`.
-- **Neutral:** plain glass — `bg-white/7%`, `border-white/12%`, `text-ink-100`.
-- **Destructive:** `down`-tinted glass, same pill shape.
-- **Hover:** fill opacity steps up; no transform, no shape change.
-- **Disabled:** 50% opacity, cursor blocked.
-
-### Stat Modules
-- **Shape:** `glass-panel`, `28px` radius, consistent internal padding.
-- **Structure:** a `10px` uppercase muted label above one large tabular `FlipValue` readout.
-- **Live update:** value background flashes semantic-tinted for 700ms on change, unchanged behavior from the prior system.
-
-### Trade Table
-- **Style:** lives inside one `glass-panel` wrapper; row dividers are `white/6%` hairlines, header row in muted uppercase over a `white/10%` rule.
-- **Row hover:** `white/4%` tint — the only per-row feedback.
-- **Status chip:** full pill, `signal`-tinted glass for open positions, plain glass for closed.
-
-### Inputs / Selects
-- **Style:** `rounded-2xl`, `bg-white/5%`, `border-white/12%` glass fill.
-- **Focus:** border shifts to `signal/50%`, fill lightens slightly. No glow, no outline ring.
-
-### Equity Curve
-- Bare SVG line-and-area chart, unchanged in structure; the area fill is now a vertical gradient fading from the up/down stroke color to transparent, echoing the glass material's own translucency instead of a flat 10%-opacity fill.
-
-### Forms (Einstellungen)
-- **Field:** unchanged pattern — `10px` uppercase muted label stacked above its glass input.
-- **Panel:** every form lives inside its own `glass-panel`, opened inline, never a modal.
-- **Actions:** cancel (plain glass pill) and submit (`signal`-tinted glass pill) sit bottom-right; destructive actions use `down`-tinted glass pills and always confirm before executing.
+- `.card`, `.card-tight`, `.card-row`, `.pill`, `.pill-primary`, `.pill-danger`, `.pill-on-dark`, `.pill-on-dark-solid`, `.field`: in `styles/globals.css` inside `@layer components`, so utilities on an element always override them.
+- `.hero-band` (rendered by `components/Background.tsx`, absolute at the top of the document) and `.insight-surface` / `.insight-surface.is-warning`.
+- `PillSelect`: a native `<select>` dressed as a capsule, so phones keep their own picker.
+- Charts in `components/Charts.tsx`: `TradeDotMatrix` (wins stack petrol dots up from a centre line, losses brick red down, the top dot solid), `MonthlyBars` (six months, pale bars, the selected month hatched with a dark label pill, empty months a dash on the zero line), `SegmentMeter` (14 slim segments for portfolio share). `components/EquityCurve.tsx` draws a smoothed petrol curve with an HTML end dot.
+- Trade detail: a centred card on desktop and a bottom sheet on phones, grouped into Position / Preise / Ergebnis rows.
 
 ## Do's and Don'ts
 
-### Do:
-- **Do** give every container the glass treatment: translucent fill, blur, hairline border, soft shadow.
-- **Do** keep the ambient `Background` mounted behind every page — it is what the glass blurs against.
-- **Do** run every numeric column in `tabular-nums` so digits align, even without a monospace face.
-- **Do** use full pill shapes for every button, filter, and chip.
-
-### Don't:
-- **Don't** reintroduce a flat, opaque panel fill (`bg-ink-900` solid) — that is the retired terminal language.
-- **Don't** use a monospace typeface anywhere; Inter with `tabular-nums` covers every numeric-alignment need.
-- **Don't** use small "instrument" corner radii (`2px`/`6px`) — every shape rounds generously now.
-- **Don't** let a panel sit without the ambient background behind it; a glass panel over flat black reads as a bug, not a material.
+- **Do** keep colour to the band, the insight card, and data marks. **Don't** tint cards or add accent borders.
+- **Do** show numbers at regular weight. **Don't** bold figures for emphasis.
+- **Do** keep every money value behind the `usd()` / `qty()` masks so the eye toggle hides it, chart axes included.
+- **Don't** reintroduce glass blur, ambient blobs, or a dark page. That identity was retired on 2026-11-16.

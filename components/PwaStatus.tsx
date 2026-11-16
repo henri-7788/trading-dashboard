@@ -71,21 +71,21 @@ export default function PwaStatus() {
     <>
       {offline && (
         <div className="fixed top-[max(0.75rem,env(safe-area-inset-top))] inset-x-0 z-50 flex justify-center px-4">
-          <div className="glass-pill glass-pill-down px-4 py-1.5 text-xs uppercase tracking-widest">Keine Verbindung — zuletzt geladene Daten</div>
+          <div className="pill pill-danger px-4 py-1.5 text-xs uppercase tracking-widest">Keine Verbindung — zuletzt geladene Daten</div>
         </div>
       )}
 
       {!installed && installPrompt && (
-        <div className="glass-panel !fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] inset-x-3 md:inset-x-auto md:bottom-4 md:right-4 md:w-80 z-50 !bg-ink-900/80 px-4 py-3.5 md:py-3 flex flex-col gap-3 md:flex-row md:items-center">
+        <div className="card fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] inset-x-3 md:inset-x-auto md:bottom-4 md:right-4 md:w-80 z-50 bg-white px-4 py-3.5 md:py-3 flex flex-col gap-3 md:flex-row md:items-center">
           <div className="flex-1 min-w-0">
-            <div className="text-xs uppercase tracking-widest text-ink-100">App installieren</div>
-            <div className="text-xs text-ink-400 mt-0.5">Als App auf dem Homescreen ablegen — schneller Start, eigenes Fenster.</div>
+            <div className="text-xs uppercase tracking-widest text-ink-900">App installieren</div>
+            <div className="text-xs text-ink-500 mt-0.5">Als App auf dem Homescreen ablegen — schneller Start, eigenes Fenster.</div>
           </div>
           <div className="grid grid-cols-2 gap-2 md:flex md:flex-col md:gap-1.5 shrink-0">
-            <button onClick={dismissInstall} className="glass-pill h-11 md:h-auto px-3 md:py-1.5 text-xs md:text-[10px] md:uppercase md:tracking-widest text-ink-400 md:order-2">
+            <button onClick={dismissInstall} className="pill h-11 md:h-auto px-3 md:py-1.5 text-xs md:text-[10px] md:uppercase md:tracking-widest text-ink-500 md:order-2">
               Nicht jetzt
             </button>
-            <button onClick={install} className="glass-pill glass-pill-signal h-11 md:h-auto px-3 md:py-1.5 text-xs md:text-[10px] font-medium md:font-normal md:uppercase md:tracking-widest md:order-1">
+            <button onClick={install} className="pill pill-primary h-11 md:h-auto px-3 md:py-1.5 text-xs md:text-[10px] font-medium md:font-normal md:uppercase md:tracking-widest md:order-1">
               Installieren
             </button>
           </div>
