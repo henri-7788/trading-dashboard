@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { ID, Query } from 'node-appwrite'
 import { databases, DATABASE_ID, TRANSACTIONS_COLLECTION_ID } from '../../../lib/appwriteServer'
 import { validateManualTransaction } from '../../../lib/transactions'
+import { normalizeCurrency, DEFAULT_CURRENCY, type Currency } from '../../../lib/fx'
 
 function mapDoc(d: any) {
   return {
@@ -14,6 +15,7 @@ function mapDoc(d: any) {
     side: d.side,
     quantity: d.quantity,
     price: d.price,
+    currency: normalizeCurrency(d.currency),
     fee: d.fee || 0,
     executedAt: d.executedAt,
     notes: d.notes || ''
@@ -54,6 +56,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       side: body.side,
       quantity: parseFloat(body.quantity),
       price: parseFloat(body.price),
+      currency: (body.currency ? String(body.currency).toUpperCase() : DEFAULT_CURRENCY) as Currency,
       fee: body.fee != null ? parseFloat(body.fee) : 0,
       executedAt: body.executedAt,
       notes: String(body.notes || '').trim()
@@ -75,6 +78,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           side: input.side,
           quantity: input.quantity,
           price: input.price,
+          currency: input.currency,
           fee: input.fee || 0,
           executedAt: new Date(input.executedAt).toISOString(),
           notes: input.notes

@@ -108,7 +108,13 @@ Geist (via `next/font/google`, variable `--font-ui`) throughout. Display greetin
 
 ## Layout
 
-Max width 1240px. Band → greeting row → a three-card first row (net worth with equity curve · PnL-per-trade dot matrix · insight card) → a three-column second row (allocation · trades · monthly performance + key figures). Below `lg` everything stacks into one column in that order. Phones keep 44px touch targets, 16px form text, safe-area padding, and a bottom-sheet trade detail.
+Max width 1240px. The band holds brand, a segmented **view switch** (Übersicht · Portfolio · Trading, kept in `?view=`; on phones it sits full-width under the title), the view title and Sync.
+
+- **Übersicht:** net worth with equity curve · PnL-per-trade dot matrix · insight card; then open positions · largest holdings · asset-class donut.
+- **Portfolio:** four KPI tiles; a full-width country card (world map + regions stacked bar + ranked top countries, with a "Mit/Ohne Krypto" switch); sectors donut · allocation stacked bars with concentration notes · look-through top companies; winners/losers diverging bars · all positions. Footnote names the data source (Eulerpool), date and coverage.
+- **Trading:** one filter bar (period, side, coin) scoping every card; four KPI tiles; equity curve with drawdown · costs waterfall + long vs. short; PnL by coin · best/worst trades · duration buckets; monthly bars · weekday · dot matrix; trade list.
+
+Below `lg` everything stacks into one column. Cards carry `min-width: 0` so long content never widens a grid column. Phones keep 44px targets, 16px form text, safe-area padding, and a bottom-sheet trade detail.
 
 ## Elevation & Depth
 
@@ -124,7 +130,9 @@ Cards 24px, rows and inputs 18px, every control a full capsule. Icon chips are 4
 - `.hero-band` (rendered by `components/Background.tsx`, absolute at the top of the document) and `.insight-surface` / `.insight-surface.is-warning`.
 - `PillSelect`: a native `<select>` dressed as a capsule, so phones keep their own picker.
 - Charts in `components/Charts.tsx`: `TradeDotMatrix` (wins stack petrol dots up from a centre line, losses brick red down, the top dot solid), `MonthlyBars` (six months, pale bars, the selected month hatched with a dark label pill, empty months a dash on the zero line), `SegmentMeter` (14 slim segments for portfolio share). `components/EquityCurve.tsx` draws a smoothed petrol curve with an HTML end dot.
-- Trade detail: a centred card on desktop and a bottom sheet on phones, grouped into Position / Preise / Ergebnis rows.
+- More charts in `components/Charts.tsx`: `Donut` (folds small slices into "Weitere", centre names the hovered slice; `stacked` puts the legend below for narrow cards), `RankedBars`, `StackedBar`, `DivergingBars` (green right / red left from a centre axis, PnL only), `DrawdownChart`, `BucketTable`. Categorical shares use the petrol ramp darkest-first (`rampColor`); "Nicht zugeordnet" is always grey.
+- `components/WorldMap.tsx`: Natural Earth projection (`d3-geo`, `world-atlas` 110m), countries stepped through seven petrol tints on a log scale, untouched countries `#e6eaeb`; loaded via `next/dynamic` only in the Portfolio view.
+- Trade detail: a centred card (640px) on desktop and a bottom sheet on phones. It opens with `components/TradeCandleChart.tsx` (TradingView Lightweight Charts, Apache 2.0, attribution logo kept; loaded via `next/dynamic`, data prefetched when the sheet opens, `ChartLoader` candle animation while loading): green/brick candles, petrol arrows for openings and adds, dots at the fill price for partial closes and the exit (green or red by realized PnL), dashed price lines for Ø entry, exit and (open trades) liquidation. Data comes from `/api/trade-chart` (Hyperliquid candles plus the wallet's fills; the interval is chosen so ~45 (phone) or ~80 (desktop) candles fill the chart, staying inside Hyperliquid's 5000-candle history). Below the chart: Position / Preise / Ergebnis rows.
 
 ## Do's and Don'ts
 

@@ -1,3 +1,5 @@
+import { SUPPORTED_CURRENCIES, type Currency } from './fx'
+
 export type AssetClass = 'crypto' | 'stock' | 'etf' | 'other'
 export type TransactionSide = 'buy' | 'sell'
 
@@ -8,6 +10,8 @@ export interface ManualTransactionInput {
   side: TransactionSide
   quantity: number
   price: number
+  /** Currency `price` and `fee` were paid in; converted to USD at the execution date's FX rate. */
+  currency: Currency
   fee?: number
   executedAt: string
   notes?: string
@@ -21,6 +25,7 @@ export function validateManualTransaction(input: Partial<ManualTransactionInput>
   // 0 is allowed deliberately: a position written off as worthless (e.g. an imported
   // corporate-action delisting) is a legitimate zero-price transaction, not a missing value.
   if (!Number.isFinite(input.price) || (input.price as number) < 0) return 'Preis darf nicht negativ sein.'
+  if (!input.currency || !(SUPPORTED_CURRENCIES as readonly string[]).includes(input.currency)) return 'Ungültige Währung.'
   if (!input.executedAt || isNaN(new Date(input.executedAt).getTime())) return 'Ungültiges Datum.'
   return null
 }

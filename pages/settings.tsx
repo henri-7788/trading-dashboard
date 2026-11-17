@@ -33,6 +33,7 @@ interface TransactionView {
   side: 'buy' | 'sell'
   quantity: number
   price: number
+  currency: 'EUR' | 'USD' | 'CHF' | 'GBP'
   fee: number
   executedAt: string
   notes: string
@@ -52,6 +53,15 @@ const ASSET_CLASS_LABEL: Record<string, string> = {
   stock: 'Aktie',
   etf: 'ETF',
   other: 'Sonstiges'
+}
+
+const CURRENCY_SYMBOL: Record<string, string> = { EUR: '€', USD: '$', CHF: 'CHF', GBP: '£' }
+
+/** Price as recorded, in its own currency — the cost basis is converted to USD only for valuation. */
+function fmtMoney(n: number, currency: string) {
+  const amount = n.toLocaleString('de-DE', { maximumFractionDigits: 4 })
+  const sym = CURRENCY_SYMBOL[currency] || currency
+  return `${amount} ${sym}`
 }
 
 export default function SettingsPage() {
@@ -311,7 +321,7 @@ export default function SettingsPage() {
                       </div>
                       <div className="text-right shrink-0 tabular">
                         <div className="text-sm text-ink-900">{t.quantity}</div>
-                        <div className="text-xs text-ink-500 mt-0.5">à {t.price.toLocaleString('en-US', { maximumFractionDigits: 4 })}</div>
+                        <div className="text-xs text-ink-500 mt-0.5">à {fmtMoney(t.price, t.currency)}</div>
                       </div>
                       <button
                         onClick={() => removeTransaction(t.id)}
@@ -353,7 +363,7 @@ export default function SettingsPage() {
                             </span>
                           </td>
                           <td className="py-2.5 px-4 tabular text-ink-500">{t.quantity}</td>
-                          <td className="py-2.5 px-4 tabular text-ink-500">{t.price.toLocaleString('en-US', { maximumFractionDigits: 4 })}</td>
+                          <td className="py-2.5 px-4 tabular text-ink-500">{fmtMoney(t.price, t.currency)}</td>
                           <td className="py-2.5 px-4 tabular text-ink-500">{new Date(t.executedAt).toLocaleDateString('de-DE')}</td>
                           <td className="py-2.5 px-4 text-right">
                             <button onClick={() => removeTransaction(t.id)} className="text-down/70 hover:text-down text-xs uppercase tracking-widest">
@@ -662,6 +672,7 @@ function ManualPositionForm({ onCancel, onSaved, setError }: { onCancel: () => v
   const [quantity, setQuantity] = useState('')
   const [price, setPrice] = useState('')
   const [fee, setFee] = useState('0')
+  const [currency, setCurrency] = useState<'EUR' | 'USD' | 'CHF' | 'GBP'>('EUR')
   const [executedAt, setExecutedAt] = useState(() => new Date().toISOString().slice(0, 10))
   const [notes, setNotes] = useState('')
   const [busy, setBusy] = useState(false)
@@ -673,7 +684,7 @@ function ManualPositionForm({ onCancel, onSaved, setError }: { onCancel: () => v
     const res = await fetch('/api/transactions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ symbol, name, assetClass, side, quantity, price, fee, executedAt, notes })
+      body: JSON.stringify({ symbol, name, assetClass, side, quantity, price, currency, fee, executedAt, notes })
     })
     setBusy(false)
     if (!res.ok) {
@@ -729,9 +740,22 @@ function ManualPositionForm({ onCancel, onSaved, setError }: { onCancel: () => v
           <input className={inputClass} type="number" step="any" min="0" value={fee} onChange={(e) => setFee(e.target.value)} />
         </Field>
       </div>
-      <Field label="Datum">
-        <input className={inputClass} type="date" value={executedAt} onChange={(e) => setExecutedAt(e.target.value)} required />
-      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Datum">
+          <input className={inputClass} type="date" value={executedAt} onChange={(e) => setExecutedAt(e.target.value)} required />
+        </Field>
+        <Field label="Währung von Preis & Gebühr">
+          <select className={inputClass} value={currency} onChange={(e) => setCurrency(e.target.value as typeof currency)}>
+            <option value="EUR">EUR (€)</option>
+            <option value="USD">USD ($)</option>
+            <option value="CHF">CHF</option>
+            <option value="GBP">GBP (£)</option>
+          </select>
+        </Field>
+      </div>
+      <p className="-mt-1 text-[12px] text-ink-500">
+        Für den Einstandspreis wird der Betrag mit dem Wechselkurs vom Kaufdatum in US-Dollar umgerechnet.
+      </p>
       <Field label="Notiz (optional)">
         <input className={inputClass} value={notes} onChange={(e) => setNotes(e.target.value)} />
       </Field>

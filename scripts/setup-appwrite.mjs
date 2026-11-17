@@ -211,6 +211,8 @@ async function main() {
   await ensureEnumAttr(TRANSACTIONS_COLLECTION_ID, 'side', ['buy', 'sell'], true)
   await ensureFloatAttr(TRANSACTIONS_COLLECTION_ID, 'quantity', true)
   await ensureFloatAttr(TRANSACTIONS_COLLECTION_ID, 'price', true)
+  // Currency the price/fee were paid in; cost bases are converted to USD at the execution date's FX rate.
+  await ensureStringAttr(TRANSACTIONS_COLLECTION_ID, 'currency', 3, false, 'EUR')
   await ensureFloatAttr(TRANSACTIONS_COLLECTION_ID, 'fee', false, 0)
   await ensureDatetimeAttr(TRANSACTIONS_COLLECTION_ID, 'executedAt', true)
   await ensureStringAttr(TRANSACTIONS_COLLECTION_ID, 'notes', 256, false, '')

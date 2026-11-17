@@ -336,3 +336,66 @@ function finalize(
     fundingFee: null
   }
 }
+
+export interface Candle {
+  t: number
+  o: number
+  h: number
+  l: number
+  c: number
+}
+
+const CANDLE_INTERVALS: [string, number][] = [
+  ['1m', 60_000],
+  ['3m', 180_000],
+  ['5m', 300_000],
+  ['15m', 900_000],
+  ['30m', 1_800_000],
+  ['1h', 3_600_000],
+  ['2h', 7_200_000],
+  ['4h', 14_400_000],
+  ['8h', 28_800_000],
+  ['12h', 43_200_000],
+  ['1d', 86_400_000],
+  ['3d', 259_200_000],
+  ['1w', 604_800_000]
+]
+
+/**
+ * Smallest Hyperliquid candle interval that keeps a window of `spanMs` at or below `maxCandles`
+ * (~90 keeps candles wide enough to read in the trade sheet).
+ * Hyperliquid only serves the most recent 5000 candles per interval, so a window starting `ageMs`
+ * ago forces a coarser interval (1m candles reach back ~3.5 days, 15m ~52 days, 1h ~208 days).
+ */
+export function pickInterval(spanMs: number, ageMs = 0, maxCandles = 90): { interval: string; ms: number } {
+  for (const [interval, ms] of CANDLE_INTERVALS) {
+    if (spanMs / ms <= maxCandles && ageMs / ms <= 4900) return { interval, ms }
+  }
+  const [interval, ms] = CANDLE_INTERVALS[CANDLE_INTERVALS.length - 1]
+  return { interval, ms }
+}
+
+export async function fetchCandles(coin: string, interval: string, startTime: number, endTime: number): Promise<Candle[]> {
+  const raw: { t: number; o: string; h: string; l: string; c: string }[] = await hlInfo({
+    type: 'candleSnapshot',
+    req: { coin, interval, startTime, endTime }
+  })
+  return (raw || []).map((k) => ({ t: k.t, o: +k.o, h: +k.h, l: +k.l, c: +k.c }))
+}
+
+/** Fills of a wallet inside [startTime, endTime], aggregated per order/time like the Hyperliquid UI. */
+export async function fetchFillsBetween(wallet: string, startTime: number, endTime: number): Promise<HyperliquidFill[]> {
+  const all: HyperliquidFill[] = []
+  const seen = new Set<number>()
+  let from = startTime
+  for (;;) {
+    const batch: HyperliquidFill[] = await hlInfo({ type: 'userFillsByTime', user: wallet, startTime: from, endTime, aggregateByTime: true })
+    const fresh = batch.filter((f) => !seen.has(f.tid))
+    if (fresh.length === 0) break
+    fresh.forEach((f) => seen.add(f.tid))
+    all.push(...fresh)
+    if (batch.length < 2000) break
+    from = Math.max(...batch.map((f) => f.time))
+  }
+  return all.sort((a, b) => a.time - b.time)
+}

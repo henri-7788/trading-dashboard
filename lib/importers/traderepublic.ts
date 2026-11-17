@@ -1,6 +1,7 @@
 import Papa from 'papaparse'
 import { searchTickers } from '../tickerSearch'
 import type { AssetClass, TransactionSide } from '../transactions'
+import { normalizeCurrency, type Currency } from '../fx'
 
 export interface ImportedTransaction {
   externalId: string
@@ -10,6 +11,7 @@ export interface ImportedTransaction {
   side: TransactionSide
   quantity: number
   price: number
+  currency: Currency
   fee: number
   executedAt: string
   notes: string
@@ -33,6 +35,8 @@ interface TradeRepublicRow {
   price: string
   fee: string
   transaction_id: string
+  /** Present in newer exports; TradeRepublic accounts are EUR, so a missing column means EUR. */
+  currency?: string
 }
 
 const REQUIRED_COLUMNS = ['datetime', 'category', 'type', 'name', 'symbol', 'shares', 'transaction_id']
@@ -111,6 +115,7 @@ export async function importTradeRepublicCsv(csvText: string): Promise<ImportRes
       side,
       quantity: Math.abs(shares),
       price: isWorthless ? 0 : Math.abs(parseFloat(r.price)) || 0,
+      currency: normalizeCurrency(r.currency),
       fee: Math.abs(parseFloat(r.fee)) || 0,
       executedAt: new Date(r.datetime).toISOString(),
       notes: match ? `ISIN ${r.symbol} · TradeRepublic-Import` : `ISIN ${r.symbol} · TradeRepublic-Import · Kurs konnte nicht automatisch aufgelöst werden`

@@ -4,7 +4,7 @@ interface Point {
 }
 
 /** Catmull-Rom → cubic Bézier, so the cumulative curve reads as one smooth stroke instead of a jagged polyline. */
-function smoothPath(pts: [number, number][]) {
+export function smoothPath(pts: [number, number][]) {
   if (pts.length < 2) return ''
   let d = `M ${pts[0][0].toFixed(2)} ${pts[0][1].toFixed(2)}`
   for (let i = 0; i < pts.length - 1; i++) {
