@@ -1,3 +1,4 @@
+import { fmtShare } from '../lib/tradeStats'
 import { useMemo, useState } from 'react'
 
 const MONTHS_DE = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
@@ -292,7 +293,7 @@ export function Donut({ items, maxSlices = 7, centerLabel, stacked = false }: { 
         </svg>
         {focus && (
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
-            <span className="text-[22px] leading-none tracking-[-0.02em] text-ink-900 tabular">{focus.pct.toFixed(focus.pct < 10 ? 1 : 0)}%</span>
+            <span className="text-[22px] leading-none tracking-[-0.02em] text-ink-900 tabular">{fmtShare(focus.pct)}</span>
             <span className="mt-1 line-clamp-2 text-[11px] leading-tight text-ink-500">{centerLabel && active == null ? centerLabel : focus.label}</span>
           </div>
         )}
@@ -308,7 +309,7 @@ export function Donut({ items, maxSlices = 7, centerLabel, stacked = false }: { 
             <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: rampColor(i, s.key) }} />
             <span className="min-w-0 flex-1 truncate text-ink-700">{s.label}</span>
             {s.amount && <span className="hidden shrink-0 text-ink-500 tabular sm:inline">{s.amount}</span>}
-            <span className="w-12 shrink-0 text-right text-ink-900 tabular">{s.pct.toFixed(1)}%</span>
+            <span className="w-14 shrink-0 text-right text-ink-900 tabular">{fmtShare(s.pct)}</span>
           </li>
         ))}
       </ul>
@@ -317,26 +318,56 @@ export function Donut({ items, maxSlices = 7, centerLabel, stacked = false }: { 
 }
 
 /** Ranked list with a proportional bar per row, scaled to the largest row. */
-export function RankedBars({ items, limit = 8, leading }: { items: Share[]; limit?: number; leading?: (s: Share) => React.ReactNode }) {
+export function RankedBars({
+  items,
+  limit = 8,
+  leading,
+  onSelect
+}: {
+  items: Share[]
+  limit?: number
+  leading?: (s: Share) => React.ReactNode
+  /** Makes each row a button (e.g. to drill into a country). */
+  onSelect?: (key: string) => void
+}) {
   const rows = items.slice(0, limit)
   const max = Math.max(1e-9, ...rows.map((r) => r.pct))
+  const grid = 'grid w-full grid-cols-[minmax(0,9rem)_1fr_3.5rem] items-center gap-3 text-[13px]'
   return (
-    <ul className="flex flex-col gap-2.5">
-      {rows.map((s) => (
-        <li key={s.key} className="grid grid-cols-[minmax(0,9rem)_1fr_3.25rem] items-center gap-3 text-[13px]">
-          <span className="flex min-w-0 items-center gap-2 text-ink-700">
-            {leading?.(s)}
-            <span className="truncate">{s.label}</span>
-          </span>
-          <span className="h-2 overflow-hidden rounded-full bg-ink-100">
-            <span
-              className={`block h-full rounded-full ${s.key === 'unbekannt' ? 'bg-ink-300' : 'bg-teal-700'}`}
-              style={{ width: `${Math.max(2, (s.pct / max) * 100)}%` }}
-            />
-          </span>
-          <span className="text-right text-ink-900 tabular">{s.pct < 10 ? s.pct.toFixed(1) : s.pct.toFixed(0)}%</span>
-        </li>
-      ))}
+    <ul className={`flex flex-col ${onSelect ? 'gap-0' : 'gap-2.5'}`}>
+      {rows.map((s) => {
+        const body = (
+          <>
+            <span className="flex min-w-0 items-center gap-2 text-ink-700">
+              {leading?.(s)}
+              <span className="truncate text-left">{s.label}</span>
+            </span>
+            <span className="h-2 overflow-hidden rounded-full bg-ink-100">
+              <span
+                className={`block h-full rounded-full ${s.key === 'unbekannt' ? 'bg-ink-300' : 'bg-teal-700'}`}
+                style={{ width: `${Math.max(2, (s.pct / max) * 100)}%` }}
+              />
+            </span>
+            <span className="text-right text-ink-900 tabular">{fmtShare(s.pct)}</span>
+          </>
+        )
+        return (
+          <li key={s.key}>
+            {onSelect ? (
+              <button
+                type="button"
+                onClick={() => onSelect(s.key)}
+                className={`${grid} -mx-2 min-h-[40px] rounded-xl px-2 transition-colors hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal-600`}
+                style={{ width: 'calc(100% + 1rem)' }}
+              >
+                {body}
+              </button>
+            ) : (
+              <div className={grid}>{body}</div>
+            )}
+          </li>
+        )
+      })}
     </ul>
   )
 }
@@ -348,7 +379,7 @@ export function StackedBar({ items }: { items: Share[] }) {
     <div>
       <div className="flex h-3.5 w-full gap-[3px] overflow-hidden rounded-full">
         {parts.map((s, i) => (
-          <span key={s.key} title={`${s.label}: ${s.pct.toFixed(1)}%`} style={{ width: `${s.pct}%`, background: rampColor(i, s.key) }} className="h-full first:rounded-l-full last:rounded-r-full" />
+          <span key={s.key} title={`${s.label}: ${fmtShare(s.pct)}`} style={{ width: `${s.pct}%`, background: rampColor(i, s.key) }} className="h-full first:rounded-l-full last:rounded-r-full" />
         ))}
       </div>
       <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[12px]">
@@ -356,7 +387,7 @@ export function StackedBar({ items }: { items: Share[] }) {
           <li key={s.key} className="flex items-center gap-1.5 text-ink-600">
             <span className="h-2 w-2 rounded-full" style={{ background: rampColor(i, s.key) }} />
             {s.label}
-            <span className="text-ink-900 tabular">{s.pct.toFixed(s.pct < 10 ? 1 : 0)}%</span>
+            <span className="text-ink-900 tabular">{fmtShare(s.pct)}</span>
           </li>
         ))}
       </ul>

@@ -1,12 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import Skeleton from '../Skeleton'
 import FlipValue from '../FlipValue'
 import { DivergingBars, Donut, RankedBars, SegmentMeter, StackedBar, type Share } from '../Charts'
 import { AssetIcon, CardHeader, ChevronIcon, EmptyState, PillSelect, prettyName } from '../ui'
 import { countryLabelDe } from '../../lib/countries'
-import { ASSET_CLASS_LABEL, fmtUsd, sortHoldings, type Holding, type HoldingSortKey, type SortDir } from '../../lib/tradeStats'
-import type { PortfolioAnalysis, Bucket } from '../../pages/api/portfolio-analysis'
+import { ASSET_CLASS_LABEL, fmtShare, fmtUsd, sortHoldings, type Holding, type HoldingSortKey, type SortDir } from '../../lib/tradeStats'
+import type { PortfolioAnalysis, Bucket, CountryAsset, CountryCompany } from '../../pages/api/portfolio-analysis'
 
 // The map pulls in d3-geo and the world shapes (~100 KB) — only loaded when this view is opened.
 const WorldMap = dynamic(() => import('../WorldMap'), {
@@ -45,6 +45,18 @@ export default function PortfolioView(p: PortfolioProps) {
   const [excludeCrypto, setExcludeCrypto] = useState(false)
   const [sort, setSort] = useState<{ key: HoldingSortKey; dir: SortDir }>({ key: 'value', dir: 'desc' })
   const [showAll, setShowAll] = useState(false)
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null)
+  const detailRef = useRef<HTMLDivElement>(null)
+
+  const selectCountry = (key: string | null) => {
+    setSelectedCountry(key)
+    // On phones the detail sits below the map; bring it into view.
+    if (key) requestAnimationFrame(() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }))
+  }
+
+  useEffect(() => {
+    if (excludeCrypto && selectedCountry === 'KRYPTO') setSelectedCountry(null)
+  }, [excludeCrypto, selectedCountry])
 
   // "Ohne Krypto" re-normalises country/sector shares over the non-crypto part, so the
   // equity side of the portfolio can be read on its own when crypto dominates the total.
@@ -142,22 +154,39 @@ export default function PortfolioView(p: PortfolioProps) {
           }
         />
         <div className="mt-4 grid gap-5 lg:grid-cols-[1.6fr_1fr] lg:items-start">
-          <div className="card-row p-3">{loading ? <Skeleton className="aspect-[2/1] w-full rounded-2xl" /> : <WorldMap shares={mapShares} />}</div>
+          <div className="card-row p-3">{loading ? <Skeleton className="aspect-[2/1] w-full rounded-2xl" /> : <WorldMap shares={mapShares} selected={selectedCountry} onSelect={selectCountry} />}</div>
           <div className="flex flex-col gap-5 px-1">
             <div>
               <div className="mb-2.5 text-[11px] uppercase tracking-[0.12em] text-ink-400">Regionen</div>
               {loading ? <Skeleton className="h-10 w-full rounded-xl" /> : <StackedBar items={view.regions.map((r) => ({ key: r.key, label: r.label, pct: r.pct }))} />}
             </div>
-            <div>
-              <div className="mb-2.5 text-[11px] uppercase tracking-[0.12em] text-ink-400">Top-Länder</div>
-              {loading ? (
-                <Skeleton className="h-48 w-full rounded-xl" />
-              ) : (
-                <RankedBars
-                  items={countryShares(view.countries, usd)}
-                  limit={9}
-                  leading={(s) => <span className="w-5 text-center text-[14px] leading-none">{flagFor(s.key) ?? '•'}</span>}
+            <div ref={detailRef} className="scroll-mt-4">
+              {!loading && selectedCountry ? (
+                <CountryDetail
+                  countryKey={selectedCountry}
+                  bucket={view.countries.find((c) => c.key === selectedCountry) ?? null}
+                  assets={a.countryAssets?.[selectedCountry] ?? []}
+                  companies={a.countryCompanies?.[selectedCountry] ?? []}
+                  usd={usd}
+                  onBack={() => setSelectedCountry(null)}
                 />
+              ) : (
+                <>
+                  <div className="mb-2.5 flex items-baseline justify-between gap-3">
+                    <span className="text-[11px] uppercase tracking-[0.12em] text-ink-400">Top-Länder</span>
+                    {!loading && <span className="text-[11px] text-ink-400">antippen für Details</span>}
+                  </div>
+                  {loading ? (
+                    <Skeleton className="h-48 w-full rounded-xl" />
+                  ) : (
+                    <RankedBars
+                      items={countryShares(view.countries, usd)}
+                      limit={9}
+                      leading={(s) => <span className="w-5 text-center text-[14px] leading-none">{flagFor(s.key) ?? '•'}</span>}
+                      onSelect={selectCountry}
+                    />
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -357,5 +386,112 @@ function ConcentrationNote({ ok, text }: { ok: boolean; text: string }) {
       <span className="text-ink-700">{text}</span>
       <span className="sr-only">{ok ? 'im Rahmen' : 'auffällig hoch'}</span>
     </li>
+  )
+}
+
+const VIA_LABEL: Record<CountryAsset['via'], string> = {
+  direct: 'direkt gehalten',
+  etf: 'über ETF',
+  crypto: 'Krypto, keinem Land zugeordnet',
+  unresolved: 'Land nicht ermittelbar'
+}
+
+/** Drill-down for one country: which positions carry its exposure, and its largest look-through companies. */
+function CountryDetail({
+  countryKey,
+  bucket,
+  assets,
+  companies,
+  usd,
+  onBack
+}: {
+  countryKey: string
+  bucket: Bucket | null
+  assets: CountryAsset[]
+  companies: CountryCompany[]
+  usd: (n: number) => string
+  onBack: () => void
+}) {
+  const name = SPECIAL_COUNTRY.has(countryKey) ? bucket?.label ?? countryKey : countryLabelDe(countryKey)
+  const total = assets.reduce((s, x) => s + x.value, 0)
+  const flag = flagFor(countryKey)
+
+  return (
+    <div className="rise-in">
+      <button
+        type="button"
+        onClick={onBack}
+        className="-ml-2 inline-flex min-h-[44px] items-center gap-1.5 rounded-xl px-2 text-[13px] text-ink-500 hover:text-ink-900"
+      >
+        <span className="rotate-90">
+          <ChevronIcon up={false} />
+        </span>
+        Alle Länder
+      </button>
+      <div className="mt-1 flex items-center gap-3">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-[22px] shadow-card">{flag ?? '•'}</span>
+        <div className="min-w-0">
+          <div className="truncate text-[17px] text-ink-900">{name}</div>
+          <div className="text-[13px] text-ink-500 tabular">
+            {bucket ? `${fmtShare(bucket.pct)} des Portfolios · ${usd(bucket.value)}` : 'Kein Anteil im Portfolio'}
+          </div>
+        </div>
+      </div>
+
+      {assets.length === 0 ? (
+        <p className="mt-4 rounded-2xl bg-white px-4 py-3 text-[13px] text-ink-500">Keine deiner Positionen hat Anteile in {name}.</p>
+      ) : (
+        <>
+          <div className="mb-2 mt-5 text-[11px] uppercase tracking-[0.12em] text-ink-400">Deine Positionen</div>
+          <ul className="flex flex-col gap-1.5">
+            {assets.map((x) => {
+              const share = total > 0 ? (x.value / total) * 100 : 0
+              return (
+                <li key={x.symbol} className="card-row px-3 py-2.5">
+                  <div className="flex items-center gap-3">
+                    <AssetIcon symbol={x.symbol} assetClass={x.assetClass} />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[14px] text-ink-900">{prettyName(x.name)}</div>
+                      <div className="truncate text-[11px] text-ink-500">
+                        {x.via === 'etf' ? `${VIA_LABEL.etf} · ${fmtShare(x.exposurePct)} des ETFs` : VIA_LABEL[x.via]}
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <div className="text-[14px] text-ink-900 tabular">{usd(x.value)}</div>
+                      <div className="text-[11px] text-ink-500 tabular">{fmtShare(share)} des Landes</div>
+                    </div>
+                  </div>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-ink-100">
+                    <div className="h-full rounded-full bg-teal-700" style={{ width: `${Math.max(2, share)}%` }} />
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        </>
+      )}
+
+      {companies.length > 0 && (
+        <>
+          <div className="mb-2 mt-5 flex items-baseline justify-between gap-3">
+            <span className="text-[11px] uppercase tracking-[0.12em] text-ink-400">Größte Unternehmen</span>
+            <span className="shrink-0 text-[11px] text-ink-400">nach ISIN-Land</span>
+          </div>
+          <ul className="flex flex-col divide-y divide-ink-100 rounded-[18px] border border-ink-100 bg-white px-3">
+            {companies.map((c) => (
+              <li key={c.name} className="flex items-center justify-between gap-3 py-2.5 text-[13px]">
+                <div className="min-w-0">
+                  <div className="truncate text-ink-900">{prettyName(c.name)}</div>
+                  <div className="text-[11px] text-ink-500">
+                    {[c.direct ? 'direkt' : null, c.etfs > 0 ? `in ${c.etfs} ETF${c.etfs === 1 ? '' : 's'}` : null].filter(Boolean).join(' + ')}
+                  </div>
+                </div>
+                <span className="shrink-0 text-ink-900 tabular">{usd(c.value)}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
   )
 }

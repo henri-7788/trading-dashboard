@@ -32,6 +32,24 @@ export interface PositionView {
   unrealizedPct: number | null
 }
 
+/** One position's contribution to a country's exposure. */
+export interface CountryAsset {
+  symbol: string
+  name: string
+  assetClass: HoldingView['assetClass']
+  value: number
+  via: 'etf' | 'direct' | 'crypto' | 'unresolved'
+  /** Share of the position that lands in this country (ETF country weight; 100 for direct holdings). */
+  exposurePct: number
+}
+
+export interface CountryCompany {
+  name: string
+  value: number
+  etfs: number
+  direct: boolean
+}
+
 export interface PortfolioAnalysis {
   totalValue: number
   unrealizedPnl: number
@@ -39,6 +57,10 @@ export interface PortfolioAnalysis {
   byAssetClass: Bucket[]
   bySource: Bucket[]
   countries: Bucket[]
+  /** Per country key: which positions make up its exposure, largest first. */
+  countryAssets: Record<string, CountryAsset[]>
+  /** Per ISO2: largest look-through companies (country from ISIN prefix for ETF constituents). */
+  countryCompanies: Record<string, CountryCompany[]>
   regions: Bucket[]
   sectors: Bucket[]
   lookThroughTop: LookThroughCompany[]
@@ -91,7 +113,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const bySource = new Map<string, number>()
     const countries = new Map<string, number>()
     const sectors = new Map<string, number>()
-    const companies = new Map<string, { name: string; value: number; etfs: Set<string>; direct: boolean }>()
+    const companies = new Map<string, { name: string; value: number; etfs: Set<string>; direct: boolean; country: string | null }>()
+    const countryAssets = new Map<string, CountryAsset[]>()
+    const addAsset = (country: string, h: HoldingView, value: number, via: CountryAsset['via'], exposurePct: number) => {
+      if (value <= 0) return
+      const list = countryAssets.get(country) || []
+      list.push({ symbol: h.symbol, name: h.name && h.name !== h.symbol ? h.name : h.symbol, assetClass: h.assetClass, value, via, exposurePct })
+      countryAssets.set(country, list)
+    }
     const unresolved: string[] = []
     let resolvedValue = 0
 
@@ -104,6 +133,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (h.assetClass === 'crypto') {
           add(sectors, 'krypto', value)
           add(countries, NO_COUNTRY, value)
+          addAsset(NO_COUNTRY, h, value, 'crypto', 100)
           resolvedValue += value
           return
         }
@@ -112,10 +142,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           try {
             const exp = await getEtfExposure(h.isin)
             for (const s of exp.sectors) add(sectors, s.key, (value * s.pct) / 100)
-            for (const c of exp.countries) add(countries, c.key, (value * c.pct) / 100)
+            for (const c of exp.countries) {
+              add(countries, c.key, (value * c.pct) / 100)
+              addAsset(c.key, h, (value * c.pct) / 100, 'etf', c.pct)
+            }
             for (const c of exp.holdings) {
               const key = companyKey(c.isin, c.name)
-              const entry = companies.get(key) || { name: c.name, value: 0, etfs: new Set<string>(), direct: false }
+              const entry = companies.get(key) || { name: c.name, value: 0, etfs: new Set<string>(), direct: false, country: countryFromIsin(c.isin) }
               entry.value += (value * c.pct) / 100
               entry.etfs.add(h.symbol)
               companies.set(key, entry)
@@ -142,10 +175,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
           add(sectors, sector || UNKNOWN, value)
           add(countries, country || UNKNOWN, value)
+          addAsset(country || UNKNOWN, h, value, country ? 'direct' : 'unresolved', 100)
           const key = companyKey(h.isin ?? null, name)
-          const entry = companies.get(key) || { name, value: 0, etfs: new Set<string>(), direct: false }
+          const entry = companies.get(key) || { name, value: 0, etfs: new Set<string>(), direct: false, country: null }
           entry.value += value
           entry.direct = true
+          // The equity profile's domicile beats the ISIN prefix.
+          entry.country = country || entry.country
           companies.set(key, entry)
           if (sector && country) resolvedValue += value
           else unresolved.push(h.symbol)
@@ -154,6 +190,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         add(sectors, UNKNOWN, value)
         add(countries, UNKNOWN, value)
+        addAsset(UNKNOWN, h, value, 'unresolved', 100)
         unresolved.push(h.symbol)
       })
     )
@@ -177,6 +214,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       bySource: toBuckets(bySource, total, (k) => k),
       // Country labels are localised on the client (Intl.DisplayNames 'de'); keys stay ISO2.
       countries: toBuckets(countries, total, (k) => (k === NO_COUNTRY ? 'Krypto (ohne Land)' : k === UNKNOWN ? 'Nicht zugeordnet' : k)),
+      countryAssets: Object.fromEntries(Array.from(countryAssets, ([k, list]) => [k, list.sort((x, y) => y.value - x.value)])),
+      countryCompanies: (() => {
+        const byCountry: Record<string, CountryCompany[]> = {}
+        for (const c of companies.values()) {
+          if (!c.country) continue
+          ;(byCountry[c.country] ||= []).push({ name: c.name, value: c.value, etfs: c.etfs.size, direct: c.direct })
+        }
+        for (const k of Object.keys(byCountry)) byCountry[k] = byCountry[k].sort((x, y) => y.value - x.value).slice(0, 5)
+        return byCountry
+      })(),
       regions: toBuckets(regions, total, (k) => (k === UNKNOWN ? 'Nicht zugeordnet' : k)),
       sectors: toBuckets(sectors, total, (k) => SECTOR_LABEL[k] || k),
       lookThroughTop: Array.from(companies.entries())

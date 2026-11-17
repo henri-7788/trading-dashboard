@@ -4,6 +4,7 @@ import { feature } from 'topojson-client'
 import type { Feature, FeatureCollection, Geometry } from 'geojson'
 import world from 'world-atlas/countries-110m.json'
 import { countryLabelDe, normalizeCountry } from '../lib/countries'
+import { fmtShare } from '../lib/tradeStats'
 
 const W = 960
 const H = 470
@@ -26,7 +27,15 @@ interface CountryShape {
  * Choropleth of look-through country exposure. Countries the portfolio doesn't touch stay a pale
  * grey; touched ones step through the petrol ramp. Hover or tap names the country and its share.
  */
-export default function WorldMap({ shares }: { shares: Record<string, number> }) {
+export default function WorldMap({
+  shares,
+  selected = null,
+  onSelect
+}: {
+  shares: Record<string, number>
+  selected?: string | null
+  onSelect?: (iso2: string | null) => void
+}) {
   const [hover, setHover] = useState<{ iso2: string | null; name: string } | null>(null)
 
   const shapes = useMemo<CountryShape[]>(() => {
@@ -49,35 +58,48 @@ export default function WorldMap({ shares }: { shares: Record<string, number> })
   }, [])
 
   const maxPct = Math.max(0, ...Object.values(shares))
-  const hoverPct = hover?.iso2 ? shares[hover.iso2] ?? 0 : 0
+  // The info box follows the pointer; without hover it names the selected country.
+  const shown = hover ?? (selected ? { iso2: selected, name: countryLabelDe(selected) } : null)
+  const shownPct = shown?.iso2 ? shares[shown.iso2] ?? 0 : 0
 
   return (
     <div className="relative">
-      <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" role="img" aria-label="Länderverteilung auf der Weltkarte">
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="h-auto w-full"
+        role="img"
+        aria-label="Länderverteilung auf der Weltkarte"
+        onClick={() => onSelect?.(null)}
+      >
         {shapes.map((s, i) => {
           const pct = s.iso2 ? shares[s.iso2] ?? 0 : 0
           const fill = stepFor(pct, maxPct) ?? '#e6eaeb'
-          const active = hover?.name === s.name
+          const isSelected = !!selected && s.iso2 === selected
+          const active = hover?.name === s.name || isSelected
           return (
             <path
               key={`${s.name}-${i}`}
               d={s.d}
               fill={fill}
               stroke={active ? '#08161c' : '#ffffff'}
-              strokeWidth={active ? 1.2 : 0.5}
+              strokeWidth={isSelected ? 1.6 : active ? 1.2 : 0.5}
               className="cursor-pointer transition-[fill]"
               onMouseEnter={() => setHover({ iso2: s.iso2, name: s.name })}
               onMouseLeave={() => setHover(null)}
-              onClick={() => setHover({ iso2: s.iso2, name: s.name })}
+              onClick={(e) => {
+                e.stopPropagation()
+                if (!s.iso2) return onSelect?.(null)
+                onSelect?.(s.iso2 === selected ? null : s.iso2)
+              }}
             />
           )
         })}
       </svg>
       <div className="pointer-events-none absolute left-2 top-2 min-h-[44px] rounded-xl bg-white/90 px-3 py-2 text-[12px] shadow-card backdrop-blur-sm">
-        {hover ? (
+        {shown ? (
           <>
-            <div className="text-ink-900">{hover.iso2 ? countryLabelDe(hover.iso2) : hover.name}</div>
-            <div className="text-ink-500 tabular">{hoverPct > 0 ? `${hoverPct < 10 ? hoverPct.toFixed(2) : hoverPct.toFixed(1)} % des Portfolios` : 'Kein Anteil'}</div>
+            <div className="text-ink-900">{shown.iso2 ? countryLabelDe(shown.iso2) : shown.name}</div>
+            <div className="text-ink-500 tabular">{shownPct > 0 ? `${fmtShare(shownPct)} des Portfolios` : 'Kein Anteil'}</div>
           </>
         ) : (
           <div className="text-ink-500">Land antippen für Details</div>

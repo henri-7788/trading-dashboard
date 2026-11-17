@@ -438,3 +438,14 @@ export function costBreakdown(trades: Trade[]) {
   const openFunding = trades.filter((t) => t.status === 'open').reduce((s, t) => s + (t.fundingFee ?? 0), 0)
   return { gross: net + fees, fees, net, openFunding }
 }
+
+/**
+ * Portfolio share in German notation with precision that never rounds a real share down to zero:
+ * 12 % · 1,3 % · 0,04 % · < 0,01 %.
+ */
+export function fmtShare(pct: number) {
+  if (!(pct > 0)) return '0\u00a0%'
+  if (pct < 0.01) return '<\u00a00,01\u00a0%'
+  const digits = pct >= 10 ? 0 : pct >= 0.1 ? 1 : 2
+  return `${pct.toLocaleString('de-DE', { minimumFractionDigits: digits, maximumFractionDigits: digits })}\u00a0%`
+}

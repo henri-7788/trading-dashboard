@@ -111,7 +111,7 @@ Geist (via `next/font/google`, variable `--font-ui`) throughout. Display greetin
 Max width 1240px. The band holds brand, a segmented **view switch** (Übersicht · Portfolio · Trading, kept in `?view=`; on phones it sits full-width under the title), the view title and Sync.
 
 - **Übersicht:** net worth with equity curve · PnL-per-trade dot matrix · insight card; then open positions · largest holdings · asset-class donut.
-- **Portfolio:** four KPI tiles; a full-width country card (world map + regions stacked bar + ranked top countries, with a "Mit/Ohne Krypto" switch); sectors donut · allocation stacked bars with concentration notes · look-through top companies; winners/losers diverging bars · all positions. Footnote names the data source (Eulerpool), date and coverage.
+- **Portfolio:** four KPI tiles; a full-width country card (world map + regions stacked bar + ranked top countries, with a "Mit/Ohne Krypto" switch; clicking a country on the map or in the ranking swaps the ranking for a country detail: the positions carrying that exposure (direct / via ETF with the ETF's country weight) and its largest look-through companies); sectors donut · allocation stacked bars with concentration notes · look-through top companies; winners/losers diverging bars · all positions. Footnote names the data source (Eulerpool), date and coverage.
 - **Trading:** one filter bar (period, side, coin) scoping every card; four KPI tiles; equity curve with drawdown · costs waterfall + long vs. short; PnL by coin · best/worst trades · duration buckets; monthly bars · weekday · dot matrix; trade list.
 
 Below `lg` everything stacks into one column. Cards carry `min-width: 0` so long content never widens a grid column. Phones keep 44px targets, 16px form text, safe-area padding, and a bottom-sheet trade detail.
@@ -137,6 +137,7 @@ Cards 24px, rows and inputs 18px, every control a full capsule. Icon chips are 4
 ## Do's and Don'ts
 
 - **Do** keep colour to the band, the insight card, and data marks. **Don't** tint cards or add accent borders.
+- **Do** format shares with `fmtShare` (German decimals, never rounds a real share to 0: `< 0,01 %`).
 - **Do** show numbers at regular weight. **Don't** bold figures for emphasis.
 - **Do** keep every money value behind the `usd()` / `qty()` masks so the eye toggle hides it, chart axes included.
 - **Don't** reintroduce glass blur, ambient blobs, or a dark page. That identity was retired on 2026-11-16.
