@@ -81,9 +81,9 @@ components:
 
 **Creative North Star: "Petrol & paper"**
 
-A private, single-user cockpit for portfolio and trading performance. The top of every page is a deep petrol band (dark `#0d3646` easing to `#5e97a9`, fading into the grey ground) with a fine white dot screen over it, so the colour reads as printed material. The band carries the brand, section navigation, a large greeting, and the day's actions. Everything below is calm: near-white cards on a cool grey page, with white inset rows inside them.
+A private, single-user cockpit for portfolio and trading performance. The top of every page is a deep petrol band (dark `#0d3646` easing to `#5e97a9`, fading into the grey ground) with a fine white dot screen over it, so the colour reads as printed material. The band carries the brand, section navigation, a large greeting, and the day's actions. Everything below is calm: near-white cards on a cool grey page, with white inset rows inside them, grouped into named chapters. A mirrored petrol band closes every dashboard page at the foot, so long views are framed top and bottom instead of trailing off into grey.
 
-Colour is spent in exactly three places: the band, the single **insight card** (same petrol material, or brick red when a position nears liquidation), and the data marks themselves. Green and brick red mean PnL direction and nothing else.
+Colour is spent in exactly three places: the band (and its mirror, the footer band), the single **insight card** (same petrol material, or brick red when a position nears liquidation), and the data marks themselves. Green and brick red mean PnL direction and nothing else.
 
 Adopted 2026-11-16 at the owner's request from a supplied fintech reference (petrol hero, white cards, dot-matrix / segment / hatched-bar charts). It replaces the Liquid Glass identity outright.
 
@@ -95,7 +95,7 @@ Adopted 2026-11-16 at the owner's request from a supplied fintech reference (pet
 
 ## Colors
 
-- **Page** `#edf0f0`: the ground below the band.
+- **Page** `ink-150` `#e6eaeb`: the ground below the band. One step darker than the cards, so they read as separate surfaces rather than one white field.
 - **Card** `ink-50` with a white 1px border and a soft two-layer shadow. **Row** pure white with an `ink-100` border, used for list entries inside cards.
 - **Text**: `ink-900` primary, `ink-500` secondary, `ink-400` tertiary and axis labels. On the band: white, `white/75` for body, `white/70` for meta.
 - **Petrol** `teal-*`: primary actions (`teal-800`), chart marks (`teal-800` strong, `teal-300` soft, `teal-100` pale bars), icon chips.
@@ -110,9 +110,11 @@ Geist (via `next/font/google`, variable `--font-ui`) throughout. Display greetin
 
 Max width 1240px. The band holds brand, a segmented **view switch** (Übersicht · Portfolio · Trading, kept in `?view=`; on phones it sits full-width under the title), the view title and Sync.
 
-- **Übersicht:** net worth with equity curve · PnL-per-trade dot matrix · insight card; then open positions · largest holdings · asset-class donut.
+- **Übersicht:** net worth with equity curve · PnL-per-trade dot matrix · insight card; then open positions over the asset-class donut · largest holdings (six, two-column list) across two columns.
 - **Portfolio:** four KPI tiles; a full-width country card (world map + regions stacked bar + ranked top countries, with a "Mit/Ohne Krypto" switch; clicking a country on the map or in the ranking swaps the ranking for a country detail: the positions carrying that exposure (direct / via ETF with the ETF's country weight) and its largest look-through companies); sectors donut · allocation stacked bars with concentration notes · look-through top companies; winners/losers diverging bars · all positions. Footnote names the data source (Eulerpool), date and coverage.
-- **Trading:** one filter bar (period, side, coin) scoping every card; four KPI tiles; equity curve with drawdown · costs waterfall + long vs. short; PnL by coin · best/worst trades · duration buckets; monthly bars · weekday · dot matrix; trade list.
+- **Trading:** one filter bar (period, side, coin) scoping every card; four KPI tiles; open positions. Chapter *Performance*: equity curve with drawdown · costs waterfall + long vs. short. Chapter *Muster*: PnL by coin · best/worst trades · monthly bars; duration buckets · weekday · dot matrix. Chapter *Trades*: the trade list.
+- **Portfolio chapters:** the country card follows the KPIs directly (it still sits on the band's fade, where a chapter label would not read). Chapter *Zusammensetzung*: sectors (donut beside legend) · allocation; largest companies (two-column list) · winners/losers. Chapter *Positionen*: all positions, full width.
+- **Rows end flush.** Multi-column rows stretch (no `items-start`), cards are `flex flex-col`, chart bodies take the spare height (`flex-1`, axis charts bottom-aligned). Cards are paired by natural height so stretching never opens a large hole inside a card.
 
 Below `lg` everything stacks into one column. Cards carry `min-width: 0` so long content never widens a grid column. Phones keep 44px targets, 16px form text, safe-area padding, and a bottom-sheet trade detail.
 
@@ -129,10 +131,21 @@ Cards 24px, rows and inputs 18px, every control a full capsule. Icon chips are 4
 - `.card`, `.card-tight`, `.card-row`, `.pill`, `.pill-primary`, `.pill-danger`, `.pill-on-dark`, `.pill-on-dark-solid`, `.field`: in `styles/globals.css` inside `@layer components`, so utilities on an element always override them.
 - `.hero-band` (rendered by `components/Background.tsx`, absolute at the top of the document) and `.insight-surface` / `.insight-surface.is-warning`.
 - `PillSelect`: a native `<select>` dressed as a capsule, so phones keep their own picker.
+- `SectionHeading` (`components/ui.tsx`): chapter marker, a petrol dot, 12px uppercase label (`<h2>`; card titles in `CardHeader` are `<h3>`), hairline to the edge, optional meta on the right. Only below the band's fade.
+- `PageFooter` (`components/PageFooter.tsx`) on `.footer-band`: the hero band mirrored (ground → petrol downward, dot screen fading upward). Brand, last sync, connected sources, "Nach oben" and "Einstellungen" pills.
+- Page titles: `<title>` per page via `next/head` — "Übersicht/Portfolio/Trading · Trading Dashboard" following the active tab, "Einstellungen · …", "Anmelden · …"; `_app` sets the fallback.
 - Charts in `components/Charts.tsx`: `TradeDotMatrix` (wins stack petrol dots up from a centre line, losses brick red down, the top dot solid), `MonthlyBars` (six months, pale bars, the selected month hatched with a dark label pill, empty months a dash on the zero line), `SegmentMeter` (14 slim segments for portfolio share). `components/EquityCurve.tsx` draws a smoothed petrol curve with an HTML end dot.
 - More charts in `components/Charts.tsx`: `Donut` (folds small slices into "Weitere", centre names the hovered slice; `stacked` puts the legend below for narrow cards), `RankedBars`, `StackedBar`, `DivergingBars` (green right / red left from a centre axis, PnL only), `DrawdownChart`, `BucketTable`. Categorical shares use the petrol ramp darkest-first (`rampColor`); "Nicht zugeordnet" is always grey.
 - `components/WorldMap.tsx`: Natural Earth projection (`d3-geo`, `world-atlas` 110m), countries stepped through seven petrol tints on a log scale, untouched countries `#e6eaeb`; loaded via `next/dynamic` only in the Portfolio view.
 - Trade detail: a centred card (640px) on desktop and a bottom sheet on phones. It opens with `components/TradeCandleChart.tsx` (TradingView Lightweight Charts, Apache 2.0, attribution logo kept; loaded via `next/dynamic`, data prefetched when the sheet opens, `ChartLoader` candle animation while loading): green/brick candles, petrol arrows for openings and adds, dots at the fill price for partial closes and the exit (green or red by realized PnL), dashed price lines for Ø entry, exit and (open trades) liquidation. Data comes from `/api/trade-chart` (Hyperliquid candles plus the wallet's fills; the interval is chosen so ~45 (phone) or ~80 (desktop) candles fill the chart, staying inside Hyperliquid's 5000-candle history). Below the chart: Position / Preise / Ergebnis rows.
+
+## Motion
+
+- Curves come from the tokens in `styles/globals.css`: `--ease-out` (`cubic-bezier(0.23, 1, 0.32, 1)`) for entering, exiting and press, `--ease-drawer` reserved for sheets.
+- Press feedback: `.pill`, `.pill-on-dark`, `.pill-on-dark-solid` scale to 0.97 while held, tappable `button.card-row` to 0.99, 160ms. Kept under reduced motion.
+- Card entrance (`.rise-in`, 600ms, 60ms stagger by `--i`) plays once per session. After ~1.5s or the first tab switch, `Dashboard` sets `data-intro-done` on `<main>` and cards appear instantly; a module flag keeps it off after client navigation to settings and back. In-card state changes (country drill-down) use `.fade-in-up` (200ms) instead.
+- Trade detail opens with `sheet-up` (320ms) and a backdrop fade (250ms), and closes the same way (`.is-closing`, 200ms). The modal unmounts on `animationend`, with a 600ms timeout fallback. Reduced motion: opacity-only fades.
+- **Don't** animate core navigation (tabs, keyboard actions) or data the user reads (chart hover).
 
 ## Do's and Don'ts
 

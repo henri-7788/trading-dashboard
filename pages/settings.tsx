@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, FormEvent } from 'react'
 import Link from 'next/link'
+import Head from 'next/head'
 import Skeleton from '../components/Skeleton'
 
 interface TickerSuggestion {
@@ -154,6 +155,9 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <div className="min-h-screen pb-16" aria-busy="true" aria-label="Lade Einstellungen">
+        <Head>
+          <title>Einstellungen · Trading Dashboard</title>
+        </Head>
         <div className="max-w-3xl mx-auto px-3 sm:px-5 md:px-8 pt-[max(0.5rem,env(safe-area-inset-top))] md:pt-5">
 <header className="mb-8 md:mb-10 text-white">
           <div className="flex h-14 items-center justify-between gap-3">
@@ -190,6 +194,9 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen pb-16">
+      <Head>
+        <title>Einstellungen · Trading Dashboard</title>
+      </Head>
       <div className="max-w-3xl mx-auto px-3 sm:px-5 md:px-8 pt-[max(0.5rem,env(safe-area-inset-top))] md:pt-5">
 <header className="mb-8 md:mb-10 text-white">
           <div className="flex h-14 items-center justify-between gap-3">

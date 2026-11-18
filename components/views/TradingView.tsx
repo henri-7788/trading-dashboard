@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import Skeleton from '../Skeleton'
 import FlipValue from '../FlipValue'
 import { BucketTable, DivergingBars, DrawdownChart, MonthlyBars, TradeDotMatrix } from '../Charts'
-import { AlertIcon, AssetIcon, CardHeader, ChevronIcon, EmptyState, PillSelect } from '../ui'
+import { AlertIcon, AssetIcon, CardHeader, ChevronIcon, EmptyState, PillSelect, SectionHeading } from '../ui'
 import {
   closedChronological,
   costBreakdown,
@@ -189,11 +189,12 @@ export default function TradingView({ trades, loading, hideValues, usd, onSelect
         )}
       </section>
 
-      {/* Equity + drawdown · costs + long/short */}
-      <div className="mt-3 md:mt-4 grid gap-3 md:gap-4 lg:grid-cols-3 lg:items-start">
-        <section className="card rise-in p-4 md:p-5 lg:col-span-2">
+      {/* Performance: equity + drawdown · costs + long/short. Rows stretch so every card ends flush. */}
+      <SectionHeading title="Performance" />
+      <div className="grid gap-3 md:gap-4 lg:grid-cols-3">
+        <section className="card rise-in flex flex-col p-4 md:p-5 lg:col-span-2">
           <CardHeader title="Equity-Kurve & Drawdown" sub="Kumulierter realisierter PnL und Abstand zum bisherigen Hoch" />
-          <div className="mt-5 px-1">{loading ? <Skeleton className="h-72 w-full rounded-2xl" /> : <DrawdownChart points={eq.points} maxDrawdown={eq.maxDrawdown} hideValues={hideValues} />}</div>
+          <div className="mt-5 flex flex-1 flex-col justify-center px-1">{loading ? <Skeleton className="h-72 w-full rounded-2xl" /> : <DrawdownChart points={eq.points} maxDrawdown={eq.maxDrawdown} hideValues={hideValues} />}</div>
         </section>
 
         <div className="flex flex-col gap-3 md:gap-4">
@@ -206,9 +207,9 @@ export default function TradingView({ trades, loading, hideValues, usd, onSelect
             )}
           </section>
 
-          <section className="card rise-in p-4 md:p-5">
+          <section className="card rise-in flex flex-1 flex-col p-4 md:p-5">
             <CardHeader title="Long vs. Short" />
-            <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="mt-4 grid flex-1 grid-cols-2 gap-2">
               {bySide.map((g) => (
                 <div key={g.key} className="card-row px-3.5 py-3">
                   <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em] ${g.key === 'long' ? 'bg-up-soft text-up' : 'bg-down-soft text-down'}`}>{g.label}</span>
@@ -223,9 +224,10 @@ export default function TradingView({ trades, loading, hideValues, usd, onSelect
         </div>
       </div>
 
-      {/* Coin · leverage · duration */}
-      <div className="mt-3 md:mt-4 grid gap-3 md:gap-4 lg:grid-cols-3 lg:items-start">
-        <section className="card rise-in p-4 md:p-5">
+      {/* Muster: cards paired by height so each row ends flush. */}
+      <SectionHeading title="Muster" />
+      <div className="grid gap-3 md:gap-4 lg:grid-cols-3">
+        <section className="card rise-in flex flex-col p-4 md:p-5">
           <CardHeader title="PnL nach Coin" sub="Realisiert inkl. Teilgewinnen offener Positionen" />
           <div className="mt-5 px-1">
             {loading ? (
@@ -237,7 +239,7 @@ export default function TradingView({ trades, loading, hideValues, usd, onSelect
             )}
           </div>
         </section>
-        <section className="card rise-in p-4 md:p-5">
+        <section className="card rise-in flex flex-col p-4 md:p-5">
           <CardHeader title="Beste & schlechteste Trades" sub="Die drei größten Ausschläge in jede Richtung" />
           {loading ? (
             <Skeleton className="mt-4 h-48 w-full rounded-2xl" />
@@ -266,15 +268,7 @@ export default function TradingView({ trades, loading, hideValues, usd, onSelect
             </ul>
           )}
         </section>
-        <section className="card rise-in p-4 md:p-5">
-          <CardHeader title="Nach Haltedauer" sub={`Ø ${fmtDurationMs(s.avgDurationMs)} pro Trade`} />
-          <div className="mt-4">{loading ? <Skeleton className="h-40 w-full rounded-2xl" /> : <BucketTable rows={bucketRows(byDuration)} />}</div>
-        </section>
-      </div>
-
-      {/* Monthly · weekday · per trade */}
-      <div className="mt-3 md:mt-4 grid gap-3 md:gap-4 lg:grid-cols-3 lg:items-start">
-        <section className="card rise-in p-4 md:p-5">
+        <section className="card rise-in flex flex-col p-4 md:p-5">
           <CardHeader
             title="Monatliche Performance"
             sub="Realisiert, letzte sechs Monate"
@@ -290,9 +284,15 @@ export default function TradingView({ trades, loading, hideValues, usd, onSelect
               />
             }
           />
-          <div className="mt-5 px-1">{loading ? <Skeleton className="h-52 w-full rounded-2xl" /> : <MonthlyBars trades={monthly} hideValues={hideValues} metric={barMetric} />}</div>
+          <div className="mt-5 flex flex-1 flex-col justify-end px-1">{loading ? <Skeleton className="h-52 w-full rounded-2xl" /> : <MonthlyBars trades={monthly} hideValues={hideValues} metric={barMetric} />}</div>
         </section>
-        <section className="card rise-in p-4 md:p-5">
+      </div>
+      <div className="mt-3 md:mt-4 grid gap-3 md:gap-4 lg:grid-cols-3">
+        <section className="card rise-in flex flex-col p-4 md:p-5">
+          <CardHeader title="Nach Haltedauer" sub={`Ø ${fmtDurationMs(s.avgDurationMs)} pro Trade`} />
+          <div className="mt-4">{loading ? <Skeleton className="h-40 w-full rounded-2xl" /> : <BucketTable rows={bucketRows(byDuration)} />}</div>
+        </section>
+        <section className="card rise-in flex flex-col p-4 md:p-5">
           <CardHeader title="Nach Wochentag" sub="Tag, an dem der Trade geschlossen wurde" />
           <div className="mt-5 px-1">
             {loading ? (
@@ -302,16 +302,17 @@ export default function TradingView({ trades, loading, hideValues, usd, onSelect
             )}
           </div>
         </section>
-        <section className="card rise-in p-4 md:p-5">
+        <section className="card rise-in flex flex-col p-4 md:p-5">
           <CardHeader title="PnL pro Trade" sub="Jede Spalte ein geschlossener Trade" />
-          <div className="mt-5 px-1">{loading ? <Skeleton className="h-48 w-full rounded-2xl" /> : <TradeDotMatrix trades={dots} hideValues={hideValues} maxColumns={22} />}</div>
+          <div className="mt-5 flex flex-1 flex-col justify-end px-1">{loading ? <Skeleton className="h-48 w-full rounded-2xl" /> : <TradeDotMatrix trades={dots} hideValues={hideValues} maxColumns={22} />}</div>
         </section>
       </div>
 
       {/* Trade list */}
-      <section className="card rise-in mt-3 md:mt-4 p-4 md:p-5">
+      <SectionHeading title="Trades" />
+      <section className="card rise-in p-4 md:p-5">
         <CardHeader
-          title="Trades"
+          title="Alle Trades"
           sub={loading ? 'Lade Trades…' : `${list.length} ${list.length === 1 ? 'Trade' : 'Trades'} · antippen für Details`}
           action={
             <PillSelect

@@ -3,7 +3,7 @@ import dynamic from 'next/dynamic'
 import Skeleton from '../Skeleton'
 import FlipValue from '../FlipValue'
 import { DivergingBars, Donut, RankedBars, SegmentMeter, StackedBar, type Share } from '../Charts'
-import { AssetIcon, CardHeader, ChevronIcon, EmptyState, PillSelect, prettyName } from '../ui'
+import { AssetIcon, CardHeader, ChevronIcon, EmptyState, PillSelect, SectionHeading, prettyName } from '../ui'
 import { countryLabelDe } from '../../lib/countries'
 import { ASSET_CLASS_LABEL, fmtShare, fmtUsd, sortHoldings, type Holding, type HoldingSortKey, type SortDir } from '../../lib/tradeStats'
 import type { PortfolioAnalysis, Bucket, CountryAsset, CountryCompany } from '../../pages/api/portfolio-analysis'
@@ -134,7 +134,7 @@ export default function PortfolioView(p: PortfolioProps) {
         </Kpi>
       </div>
 
-      {/* Countries */}
+      {/* Countries — first card under the KPIs, still on the band's fade, so no chapter heading. */}
       <section className="card rise-in mt-3 md:mt-4 p-4 md:p-5">
         <CardHeader
           title="Länder"
@@ -193,20 +193,20 @@ export default function PortfolioView(p: PortfolioProps) {
         </div>
       </section>
 
-      {/* Sectors · allocation · look-through */}
-      <div className="mt-3 md:mt-4 grid gap-3 md:gap-4 lg:grid-cols-3 lg:items-start">
-        <section className="card rise-in p-4 md:p-5">
+      {/* Zusammensetzung: two rows of two, paired by height so each row ends flush. */}
+      <SectionHeading title="Zusammensetzung" />
+      <div className="grid gap-3 md:gap-4 lg:grid-cols-2">
+        <section className="card rise-in flex flex-col p-4 md:p-5">
           <CardHeader title="Sektoren" sub={excludeCrypto ? 'ohne Krypto' : 'inklusive Krypto als eigener Sektor'} />
-          <div className="mt-5 px-1">
+          <div className="mt-5 flex flex-1 flex-col justify-center px-1">
             {loading ? (
               <Skeleton className="h-40 w-full rounded-2xl" />
             ) : (
-              <Donut items={view.sectors.map((s) => ({ key: s.key, label: s.label, pct: s.pct, amount: usd(s.value) }))} maxSlices={8} centerLabel="größter Sektor" stacked />
+              <Donut items={view.sectors.map((s) => ({ key: s.key, label: s.label, pct: s.pct, amount: usd(s.value) }))} maxSlices={8} centerLabel="größter Sektor" />
             )}
           </div>
         </section>
-
-        <section className="card rise-in p-4 md:p-5">
+        <section className="card rise-in flex flex-col p-4 md:p-5">
           <CardHeader title="Aufteilung" sub="Nach Anlageklasse und Verwahrort" />
           <div className="mt-5 flex flex-col gap-6 px-1">
             <div>
@@ -229,15 +229,16 @@ export default function PortfolioView(p: PortfolioProps) {
             )}
           </div>
         </section>
-
-        <section className="card rise-in p-4 md:p-5">
+      </div>
+      <div className="mt-3 md:mt-4 grid gap-3 md:gap-4 lg:grid-cols-2">
+        <section className="card rise-in flex flex-col p-4 md:p-5">
           <CardHeader title="Größte Unternehmen" sub="Direkt gehalten und über ETFs zusammengerechnet" />
           {loading ? (
             <Skeleton className="mt-4 h-72 w-full rounded-2xl" />
           ) : a.lookThroughTop.length === 0 ? (
             <EmptyState>Keine Daten zu ETF-Bestandteilen.</EmptyState>
           ) : (
-            <ul className="mt-4 flex flex-col gap-1.5">
+            <ul className="mt-4 grid grid-cols-1 gap-1.5 md:grid-cols-2">
               {a.lookThroughTop.slice(0, 10).map((c, i) => (
                 <li key={c.key} className="card-row flex items-center gap-3 px-3 py-2.5">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-teal-50 text-[12px] font-medium text-teal-800">{i + 1}</span>
@@ -256,11 +257,7 @@ export default function PortfolioView(p: PortfolioProps) {
             </ul>
           )}
         </section>
-      </div>
-
-      {/* Performance · all positions */}
-      <div className="mt-3 md:mt-4 grid gap-3 md:gap-4 lg:grid-cols-[1fr_1.4fr] lg:items-start">
-        <section className="card rise-in p-4 md:p-5">
+        <section className="card rise-in flex flex-col p-4 md:p-5">
           <CardHeader title="Gewinner & Verlierer" sub="Unrealisiert seit Kauf, nur Positionen mit Einstandspreis" />
           <div className="mt-5 px-1">
             {loading ? (
@@ -272,7 +269,10 @@ export default function PortfolioView(p: PortfolioProps) {
             )}
           </div>
         </section>
+      </div>
 
+      {/* Positionen */}
+      <SectionHeading title="Positionen" />
         <section className="card rise-in p-4 md:p-5">
           <CardHeader
             title="Alle Positionen"
@@ -297,7 +297,7 @@ export default function PortfolioView(p: PortfolioProps) {
               />
             }
           />
-          <ul className="mt-4 grid grid-cols-1 gap-2 xl:grid-cols-2">
+          <ul className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-2">
             {!p.holdingsLoaded &&
               [0, 1, 2, 3].map((i) => (
                 <li key={i} className="card-row flex items-center gap-3 px-3.5 py-3.5">
@@ -345,7 +345,6 @@ export default function PortfolioView(p: PortfolioProps) {
             </button>
           )}
         </section>
-      </div>
 
       {a && (
         <p className="mt-4 px-2 text-[12px] leading-relaxed text-ink-500">
@@ -417,7 +416,7 @@ function CountryDetail({
   const flag = flagFor(countryKey)
 
   return (
-    <div className="rise-in">
+    <div className="fade-in-up">
       <button
         type="button"
         onClick={onBack}

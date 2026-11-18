@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { AssetIcon, AlertIcon, ChartLoader, CloseIcon } from './ui'
 import { loadTradeChart } from '../lib/tradeChartClient'
@@ -44,8 +44,24 @@ export default function TradeDetailModal({
     loadTradeChart(t.id).catch(() => {})
   }, [t.id])
 
+  // Closing plays the exit animation first; the parent unmounts us on animationend.
+  const [closing, setClosing] = useState(false)
+  const requestClose = useCallback(() => setClosing(true), [])
+  // The parent passes a fresh onClose each render; a ref keeps the fallback timer from restarting.
+  const onCloseRef = useRef(onClose)
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    onCloseRef.current = onClose
+  })
+
+  // Fallback in case animationend never arrives (e.g. the tab was hidden mid-animation).
+  useEffect(() => {
+    if (!closing) return
+    const id = window.setTimeout(() => onCloseRef.current(), 600)
+    return () => window.clearTimeout(id)
+  }, [closing])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && requestClose()
     window.addEventListener('keydown', onKey)
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
@@ -53,7 +69,7 @@ export default function TradeDetailModal({
       window.removeEventListener('keydown', onKey)
       document.body.style.overflow = prev
     }
-  }, [onClose])
+  }, [requestClose])
 
   const price = (n: number | null) => (n != null ? n.toLocaleString('en-US', { maximumFractionDigits: 4 }) : '—')
   const signed = (n: number) => <span className={n >= 0 ? 'text-up' : 'text-down'}>{usd(n)}</span>
@@ -100,15 +116,18 @@ export default function TradeDetailModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-4 bg-ink-950/35 backdrop-blur-[3px]"
-      onClick={onClose}
+      className={`modal-backdrop fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-4 bg-ink-950/35 backdrop-blur-[3px] ${closing ? 'is-closing' : ''}`}
+      onClick={requestClose}
       role="dialog"
       aria-modal="true"
       aria-label={`Trade-Details ${t.coin}`}
     >
       <div
-        className="card animate-sheet-up w-full md:max-w-[640px] max-h-[88dvh] md:max-h-[85vh] overflow-y-auto overscroll-contain rounded-b-none md:rounded-3xl bg-ink-50 px-4 md:px-5 pt-2 md:pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] md:pb-5"
+        className={`card animate-sheet-up ${closing ? 'is-closing' : ''} w-full md:max-w-[640px] max-h-[88dvh] md:max-h-[85vh] overflow-y-auto overscroll-contain rounded-b-none md:rounded-3xl bg-ink-50 px-4 md:px-5 pt-2 md:pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] md:pb-5`}
         onClick={(e) => e.stopPropagation()}
+        onAnimationEnd={(e) => {
+          if (closing && e.target === e.currentTarget) onClose()
+        }}
       >
         <div className="md:hidden mx-auto mb-3 h-1 w-10 rounded-full bg-ink-200" aria-hidden="true" />
         <div className="flex items-start justify-between gap-3 px-1">
@@ -132,7 +151,7 @@ export default function TradeDetailModal({
               </div>
             </div>
           </div>
-          <button type="button" onClick={onClose} aria-label="Schließen" className="pill -mr-1 h-11 w-11 shrink-0 text-ink-600">
+          <button type="button" onClick={requestClose} aria-label="Schließen" className="pill -mr-1 h-11 w-11 shrink-0 text-ink-600">
             <CloseIcon />
           </button>
         </div>

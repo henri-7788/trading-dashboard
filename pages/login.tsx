@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
+import Head from 'next/head'
 
 const PIN_LENGTH = 4
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'back'] as const
@@ -64,6 +65,9 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
+      <Head>
+        <title>Anmelden · Trading Dashboard</title>
+      </Head>
       <div className={`card p-8 w-full max-w-xs ${shake ? 'animate-shake' : ''}`}>
         <h1 className="text-xl font-normal tracking-[-0.02em] text-ink-900 mb-1 text-center">Trading Dashboard</h1>
         <p className="text-xs uppercase tracking-widest text-ink-500 mb-6 text-center">Code eingeben</p>

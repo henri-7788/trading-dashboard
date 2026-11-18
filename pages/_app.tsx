@@ -12,6 +12,7 @@ export default function App({ Component, pageProps }: AppProps) {
     <div className={`${ui.variable} font-sans`}>
       <Head>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <title>Trading Dashboard</title>
       </Head>
       <Background />
       <PwaStatus />

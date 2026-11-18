@@ -2,12 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Motion tokens — every transition and keyframe below draws its curve from here. */
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
 html, body, #__next {
   height: 100%;
 }
 
 body {
-  @apply bg-[#edf0f0] text-ink-900 antialiased;
+  @apply bg-ink-150 text-ink-900 antialiased;
 }
 
 ::selection {
@@ -107,7 +113,7 @@ html {
   background:
     radial-gradient(120% 90% at 85% 0%, rgba(94, 151, 169, 0.55) 0%, rgba(94, 151, 169, 0) 55%),
     radial-gradient(90% 80% at 10% 10%, #082733 0%, rgba(8, 39, 51, 0) 70%),
-    linear-gradient(180deg, #0d3646 0%, #1a5366 45%, #6f9fae 78%, #edf0f0 100%);
+    linear-gradient(180deg, #0d3646 0%, #1a5366 45%, #6f9fae 78%, #e6eaeb 100%);
 }
 
 .hero-band::after {
@@ -118,6 +124,26 @@ html {
   background-size: 6px 6px;
   -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 100%);
   mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 100%);
+}
+
+/* Footer band — the hero band mirrored: the grey ground deepens downward into petrol, with the same
+   dot screen fading out toward the top. It closes the page so long views don't trail off into grey. */
+.footer-band {
+  background:
+    radial-gradient(120% 90% at 15% 100%, rgba(94, 151, 169, 0.45) 0%, rgba(94, 151, 169, 0) 55%),
+    radial-gradient(90% 80% at 90% 95%, #082733 0%, rgba(8, 39, 51, 0) 70%),
+    linear-gradient(0deg, #0d3646 0%, #1a5366 50%, #6f9fae 82%, #e6eaeb 100%);
+}
+
+.footer-band::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.11) 1px, transparent 1.2px);
+  background-size: 6px 6px;
+  -webkit-mask-image: linear-gradient(0deg, #000 0%, #000 45%, transparent 100%);
+  mask-image: linear-gradient(0deg, #000 0%, #000 45%, transparent 100%);
 }
 
 /* Insight card — the one saturated card in the grid, the same petrol material as the band. */
@@ -189,14 +215,60 @@ html {
   animation: shake 400ms ease-in-out;
 }
 
-/* Bottom sheet entrance on phones — rises from the bottom edge with an exponential ease-out. */
+/* Press feedback — pills and tappable list rows sink slightly while held, so the tap reads as heard.
+   Kept under reduced motion: a 3% scale is feedback, not movement. */
+.pill,
+.pill-on-dark,
+.pill-on-dark-solid,
+button.card-row {
+  transition-property: color, background-color, border-color, transform;
+  transition-duration: 160ms;
+  transition-timing-function: var(--ease-out);
+}
+
+.pill:active:not(:disabled),
+.pill-on-dark:active:not(:disabled),
+.pill-on-dark-solid:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+button.card-row:active {
+  transform: scale(0.99);
+}
+
+/* Bottom sheet / modal — rises in on open, leaves the same way on close, backdrop fades with it. */
 @keyframes sheet-up {
   from { transform: translateY(24px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
 
+@keyframes sheet-down {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(24px); opacity: 0; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+}
+
+@keyframes fade-out {
+  to { opacity: 0; }
+}
+
 .animate-sheet-up {
-  animation: sheet-up 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  animation: sheet-up 320ms var(--ease-out);
+}
+
+.animate-sheet-up.is-closing {
+  animation: sheet-down 200ms var(--ease-out) forwards;
+}
+
+.modal-backdrop {
+  animation: fade-in 250ms var(--ease-out);
+}
+
+.modal-backdrop.is-closing {
+  animation: fade-out 200ms var(--ease-out) forwards;
 }
 
 /* Page entrance — cards settle upward once, staggered by their --i index. */
@@ -208,6 +280,21 @@ html {
 .rise-in {
   animation: rise-in 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+/* The staggered entrance plays once per session. Tab switches are core navigation and must feel
+   instant, so once the intro has played the dashboard marks <main> and cards simply appear. */
+main[data-intro-done] .rise-in {
+  animation: none;
+}
+
+/* Quick in-place reveal for state changes inside a card (e.g. the country drill-down). */
+@keyframes fade-in-up {
+  from { transform: translateY(6px); opacity: 0; }
+}
+
+.fade-in-up {
+  animation: fade-in-up 200ms var(--ease-out);
 }
 
 /* Skeleton placeholders — a faint bar with a slow sheen sweeping across. */
@@ -249,7 +336,17 @@ html {
   .candle-loader > span,
   .skeleton,
   .rise-in,
-  .animate-sheet-up {
+  .fade-in-up {
     animation: none;
+  }
+
+  /* The modal keeps an opacity-only fade: it bridges open/close without movement,
+     and its close handler waits for animationend. */
+  .animate-sheet-up {
+    animation-name: fade-in;
+  }
+
+  .animate-sheet-up.is-closing {
+    animation-name: fade-out;
   }
 }

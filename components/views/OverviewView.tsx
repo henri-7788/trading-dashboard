@@ -67,7 +67,7 @@ export default function OverviewView(p: OverviewProps) {
 
   const openTrades = useMemo(() => trades.filter((t) => t.status === 'open'), [trades])
   const holdingsTotal = useMemo(() => holdings.reduce((s, h) => s + (h.value ?? 0), 0), [holdings])
-  const topHoldings = useMemo(() => [...holdings].sort((a, b) => (b.value ?? 0) - (a.value ?? 0)).slice(0, 5), [holdings])
+  const topHoldings = useMemo(() => [...holdings].sort((a, b) => (b.value ?? 0) - (a.value ?? 0)).slice(0, 6), [holdings])
   const byClass = useMemo(() => {
     const m = new Map<string, number>()
     for (const h of holdings) m.set(h.assetClass, (m.get(h.assetClass) || 0) + (h.value ?? 0))
@@ -202,80 +202,88 @@ export default function OverviewView(p: OverviewProps) {
         </div>
       </div>
 
-      {/* Row 2: open positions · largest holdings · allocation */}
-      <div className="mt-3 md:mt-4 grid gap-3 md:gap-4 lg:grid-cols-3 lg:items-start">
-        <section className="card rise-in p-4 md:p-5" style={{ ['--i' as string]: 3 }}>
-          <CardHeader
-            title="Offene Positionen"
-            sub={
-              loading
-                ? 'Lade…'
-                : `${openTrades.length} offen · unrealisiert ${usd(allStats.openUnrealized)}${
-                    openTrades.some(hasPartialCloses) ? ` · Teilgewinne ${usd(allStats.openRealized)}` : ''
-                  }`
-            }
-          />
-          {loading ? (
-            <ul className="mt-4 flex flex-col gap-2">
-              {[0, 1].map((i) => (
-                <li key={i} className="card-row flex items-center gap-3 px-3.5 py-3.5">
-                  <Skeleton className="h-9 w-9 shrink-0" />
-                  <Skeleton className="h-3.5 flex-1" />
-                </li>
-              ))}
-            </ul>
-          ) : openTrades.length === 0 ? (
-            <EmptyState>Gerade keine offenen Positionen.</EmptyState>
-          ) : (
-            <ul className="mt-4 flex flex-col gap-2">
-              {openTrades.map((t) => {
-                const pct = pnlPct(t)
-                const risk = liquidationRisk(t)
-                return (
-                  <li key={t.id}>
-                    <button
-                      type="button"
-                      onClick={() => p.onSelectTrade(t)}
-                      className="card-row flex w-full items-center gap-3 px-3.5 py-3 text-left transition-colors hover:border-ink-200 active:bg-ink-50"
-                    >
-                      <AssetIcon symbol={t.coin} assetClass="crypto" size="lg" />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[15px] text-ink-900">{t.coin}</span>
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em] ${t.side === 'long' ? 'bg-up-soft text-up' : 'bg-down-soft text-down'}`}>
-                            {t.side}
-                            {t.leverage != null && ` ${t.leverage}x`}
-                          </span>
-                        </div>
-                        <div className="mt-0.5 truncate text-[12px] text-ink-500 tabular">
-                          {t.connectionLabel ? `${t.connectionLabel} · ` : ''}seit {fmtDate(t.openedAt)}
-                        </div>
-                        {hasPartialCloses(t) && (
-                          <div className="mt-0.5 text-[12px] text-ink-500 tabular">
-                            Teilgewinne realisiert: <span className={t.realizedPnl! >= 0 ? 'text-up' : 'text-down'}>{usd(t.realizedPnl!)}</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <div className={`text-[15px] tabular ${t.pnl >= 0 ? 'text-up' : 'text-down'}`}>{usd(t.pnl)}</div>
-                        <div className="mt-0.5 flex items-center justify-end gap-1 text-[12px] tabular">
-                          {risk && (
-                            <span className={`${LIQUIDATION_RISK_STYLE[risk]} flex`} title={LIQUIDATION_RISK_LABEL[risk]} aria-label={LIQUIDATION_RISK_LABEL[risk]}>
-                              <AlertIcon size={13} />
-                            </span>
-                          )}
-                          <span className={pct == null ? 'text-ink-400' : pct >= 0 ? 'text-up/80' : 'text-down/80'}>{pct != null ? fmtPct(pct) : '—'}</span>
-                        </div>
-                      </div>
-                    </button>
+      {/* Row 2: open positions + allocation stacked · largest holdings across two columns, so the row ends flush */}
+      <div className="mt-3 md:mt-4 grid gap-3 md:gap-4 lg:grid-cols-3">
+        <div className="flex flex-col gap-3 md:gap-4">
+          <section className="card rise-in p-4 md:p-5" style={{ ['--i' as string]: 3 }}>
+            <CardHeader
+              title="Offene Positionen"
+              sub={
+                loading
+                  ? 'Lade…'
+                  : `${openTrades.length} offen · unrealisiert ${usd(allStats.openUnrealized)}${
+                      openTrades.some(hasPartialCloses) ? ` · Teilgewinne ${usd(allStats.openRealized)}` : ''
+                    }`
+              }
+            />
+            {loading ? (
+              <ul className="mt-4 flex flex-col gap-2">
+                {[0, 1].map((i) => (
+                  <li key={i} className="card-row flex items-center gap-3 px-3.5 py-3.5">
+                    <Skeleton className="h-9 w-9 shrink-0" />
+                    <Skeleton className="h-3.5 flex-1" />
                   </li>
-                )
-              })}
-            </ul>
-          )}
-        </section>
+                ))}
+              </ul>
+            ) : openTrades.length === 0 ? (
+              <EmptyState>Gerade keine offenen Positionen.</EmptyState>
+            ) : (
+              <ul className="mt-4 flex flex-col gap-2">
+                {openTrades.map((t) => {
+                  const pct = pnlPct(t)
+                  const risk = liquidationRisk(t)
+                  return (
+                    <li key={t.id}>
+                      <button
+                        type="button"
+                        onClick={() => p.onSelectTrade(t)}
+                        className="card-row flex w-full items-center gap-3 px-3.5 py-3 text-left transition-colors hover:border-ink-200 active:bg-ink-50"
+                      >
+                        <AssetIcon symbol={t.coin} assetClass="crypto" size="lg" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[15px] text-ink-900">{t.coin}</span>
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em] ${t.side === 'long' ? 'bg-up-soft text-up' : 'bg-down-soft text-down'}`}>
+                              {t.side}
+                              {t.leverage != null && ` ${t.leverage}x`}
+                            </span>
+                          </div>
+                          <div className="mt-0.5 truncate text-[12px] text-ink-500 tabular">
+                            {t.connectionLabel ? `${t.connectionLabel} · ` : ''}seit {fmtDate(t.openedAt)}
+                          </div>
+                          {hasPartialCloses(t) && (
+                            <div className="mt-0.5 text-[12px] text-ink-500 tabular">
+                              Teilgewinne realisiert: <span className={t.realizedPnl! >= 0 ? 'text-up' : 'text-down'}>{usd(t.realizedPnl!)}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <div className={`text-[15px] tabular ${t.pnl >= 0 ? 'text-up' : 'text-down'}`}>{usd(t.pnl)}</div>
+                          <div className="mt-0.5 flex items-center justify-end gap-1 text-[12px] tabular">
+                            {risk && (
+                              <span className={`${LIQUIDATION_RISK_STYLE[risk]} flex`} title={LIQUIDATION_RISK_LABEL[risk]} aria-label={LIQUIDATION_RISK_LABEL[risk]}>
+                                <AlertIcon size={13} />
+                              </span>
+                            )}
+                            <span className={pct == null ? 'text-ink-400' : pct >= 0 ? 'text-up/80' : 'text-down/80'}>{pct != null ? fmtPct(pct) : '—'}</span>
+                          </div>
+                        </div>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </section>
+          <section className="card rise-in flex flex-1 flex-col p-4 md:p-5" style={{ ['--i' as string]: 5 }}>
+            <CardHeader title="Anlageklassen" sub="Anteil am Portfoliowert" />
+            <div className="mt-5 flex flex-1 flex-col justify-center px-1">
+              {!p.holdingsLoaded ? <Skeleton className="h-40 w-full rounded-2xl" /> : byClass.length === 0 ? <EmptyState>Noch keine Positionen.</EmptyState> : <Donut items={byClass} centerLabel="größte Klasse" />}
+            </div>
+          </section>
+        </div>
 
-        <section className="card rise-in p-4 md:p-5" style={{ ['--i' as string]: 4 }}>
+        <section className="card rise-in flex flex-col p-4 md:p-5 lg:col-span-2" style={{ ['--i' as string]: 4 }}>
           <CardHeader title="Größte Positionen" sub={p.holdingsLoaded ? `${usd(holdingsTotal)} in ${holdings.length} Positionen` : 'Lade…'} />
           {!p.holdingsLoaded ? (
             <ul className="mt-4 flex flex-col gap-2">
@@ -289,7 +297,7 @@ export default function OverviewView(p: OverviewProps) {
           ) : holdings.length === 0 ? (
             <EmptyState>Keine gehaltenen Positionen.</EmptyState>
           ) : (
-            <ul className="mt-4 flex flex-col gap-2">
+            <ul className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-2">
               {topHoldings.map((h, i) => {
                 const share = holdingsTotal > 0 && h.value != null ? h.value / holdingsTotal : 0
                 return (
@@ -316,19 +324,13 @@ export default function OverviewView(p: OverviewProps) {
               })}
             </ul>
           )}
-          <button type="button" onClick={() => p.onNavigate('portfolio')} className="pill mt-3 h-10 w-full text-[13px] text-ink-700">
+          <div className="h-3 shrink-0" aria-hidden="true" />
+          <button type="button" onClick={() => p.onNavigate('portfolio')} className="pill mt-auto h-10 w-full text-[13px] text-ink-700">
             Zur Portfolio-Analyse
             <span className="-rotate-90">
               <ChevronIcon up={false} />
             </span>
           </button>
-        </section>
-
-        <section className="card rise-in p-4 md:p-5" style={{ ['--i' as string]: 5 }}>
-          <CardHeader title="Anlageklassen" sub="Anteil am Portfoliowert" />
-          <div className="mt-5 px-1">
-            {!p.holdingsLoaded ? <Skeleton className="h-40 w-full rounded-2xl" /> : byClass.length === 0 ? <EmptyState>Noch keine Positionen.</EmptyState> : <Donut items={byClass} centerLabel="größte Klasse" />}
-          </div>
         </section>
       </div>
     </>

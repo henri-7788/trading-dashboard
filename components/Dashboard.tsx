@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import Head from 'next/head'
 import { useRouter } from 'next/router'
 import TradeDetailModal from './TradeDetailModal'
+import PageFooter from './PageFooter'
 import OverviewView from './views/OverviewView'
 import PortfolioView from './views/PortfolioView'
 import TradingView from './views/TradingView'
@@ -16,6 +18,11 @@ const VIEWS: { key: View; label: string; icon: React.ReactNode }[] = [
   { key: 'portfolio', label: 'Portfolio', icon: <PieIcon /> },
   { key: 'trading', label: 'Trading', icon: <PulseIcon /> }
 ]
+
+// The staggered card entrance plays once per session. Module scope survives client-side
+// navigation (settings and back), so returning to the dashboard doesn't replay it.
+let introPlayed = false
+const INTRO_MS = 1500 // last card: 5 × 60ms delay + 600ms animation, plus headroom
 
 function isView(v: unknown): v is View {
   return v === 'uebersicht' || v === 'portfolio' || v === 'trading'
@@ -45,6 +52,16 @@ export default function Dashboard() {
 
   // Money values start censored; the eye toggle reveals them and the choice persists per device.
   const [hideValues, setHideValues] = useState(true)
+  const [introDone, setIntroDone] = useState(introPlayed)
+
+  useEffect(() => {
+    if (introDone) return
+    const id = window.setTimeout(() => {
+      introPlayed = true
+      setIntroDone(true)
+    }, INTRO_MS)
+    return () => window.clearTimeout(id)
+  }, [introDone])
 
   useEffect(() => {
     if (localStorage.getItem(HIDE_VALUES_KEY) === '0') setHideValues(false)
@@ -174,6 +191,8 @@ export default function Dashboard() {
   }, [view, loadAnalysis])
 
   const navigate = (next: View) => {
+    introPlayed = true
+    setIntroDone(true)
     const query = { ...router.query }
     if (next === 'uebersicht') delete query.view
     else query.view = next
@@ -196,14 +215,17 @@ export default function Dashboard() {
   const heading: Record<View, string> = { uebersicht: `${greeting}.`, portfolio: 'Portfolio-Analyse', trading: 'Trading-Analyse' }
 
   return (
-    <div className="min-h-screen pb-16">
+    <div className="flex min-h-screen flex-col">
+      <Head>
+        <title>{`${VIEWS.find((v) => v.key === view)?.label ?? 'Übersicht'} · Trading Dashboard`}</title>
+      </Head>
       {/* THESIS: one petrol band carries the greeting, the three views, and the day's actions; everything below is calm near-white cards on cool grey, so the only saturated surfaces are the band, the insight card, and the data marks.
-          OWN-WORLD: deep petrol (#0d3646 → #5e97a9) band with a fine dot screen, #edf0f0 ground, soft white cards with white inset rows, capsule pills, Geist at regular weight with tight tracking for figures, petrol charts (dot matrix, segment meters, donut, ranked bars, world map), green and brick red only for PnL direction.
+          OWN-WORLD: deep petrol (#0d3646 → #5e97a9) band with a fine dot screen, #e6eaeb (ink-150) ground, soft white cards with white inset rows, capsule pills, Geist at regular weight with tight tracking for figures, petrol charts (dot matrix, segment meters, donut, ranked bars, world map), green and brick red only for PnL direction.
           STORY: Übersicht answers "how am I doing"; Portfolio answers "where is my money" (countries, sectors, look-through); Trading answers "what makes my trades win or lose".
           FIRST VIEWPORT: band with brand, view tabs, title and Sync; below it the active view's first row of cards.
           FORM: user-supplied reference (petrol fintech dashboard), adapted to trading; three views via ?view= since 2026-11-16.
           FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md. */}
-      <div className="mx-auto max-w-[1240px] px-3 sm:px-5 md:px-8 pt-[max(0.5rem,env(safe-area-inset-top))] md:pt-5">
+      <div className="mx-auto w-full max-w-[1240px] flex-1 px-3 sm:px-5 md:px-8 pt-[max(0.5rem,env(safe-area-inset-top))] md:pt-5">
         <nav className="flex h-14 items-center justify-between gap-3" aria-label="Hauptnavigation">
           <button type="button" onClick={() => navigate('uebersicht')} className="flex items-center gap-2.5 text-white">
             <BrandMark />
@@ -267,7 +289,7 @@ export default function Dashboard() {
 
         {error && <div className="card-tight mt-5 px-4 py-3 text-sm text-down">{error}</div>}
 
-        <main className="mt-6 md:mt-10" id={`view-${view}`} role="tabpanel" aria-label={VIEWS.find((v) => v.key === view)?.label}>
+        <main className="mt-6 md:mt-10" data-intro-done={introDone || undefined} id={`view-${view}`} role="tabpanel" aria-label={VIEWS.find((v) => v.key === view)?.label}>
           {view === 'uebersicht' && (
             <OverviewView
               trades={trades}
@@ -300,6 +322,8 @@ export default function Dashboard() {
           {view === 'trading' && <TradingView trades={trades} loading={loading} hideValues={hideValues} usd={usd} onSelectTrade={setSelectedTrade} />}
         </main>
       </div>
+
+      <PageFooter lastSyncedAt={lastSyncedAt} sources={connectionLabels} loading={loading} />
 
       {selectedTrade && <TradeDetailModal trade={selectedTrade} usd={usd} qty={qty} onClose={() => setSelectedTrade(null)} />}
     </div>

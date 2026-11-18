@@ -262,10 +262,22 @@ export function CardHeader({ title, sub, action }: { title: string; sub?: React.
   return (
     <div className="flex items-start justify-between gap-3 px-1">
       <div className="min-w-0">
-        <h2 className="text-[15px] font-medium text-ink-900">{title}</h2>
+        <h3 className="text-[15px] font-medium text-ink-900">{title}</h3>
         {sub && <p className="mt-0.5 text-[12px] text-ink-500">{sub}</p>}
       </div>
       {action}
+    </div>
+  )
+}
+
+/** Chapter marker between groups of cards: petrol dot, small caps label, hairline to the edge. */
+export function SectionHeading({ title, meta }: { title: string; meta?: React.ReactNode }) {
+  return (
+    <div className="mb-3 mt-8 flex items-center gap-3 px-1 md:mt-10">
+      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-teal-600" aria-hidden="true" />
+      <h2 className="shrink-0 text-[12px] font-medium uppercase tracking-[0.14em] text-ink-500">{title}</h2>
+      <span className="h-px min-w-0 flex-1 bg-ink-200" aria-hidden="true" />
+      {meta && <span className="shrink-0 text-[12px] text-ink-500 tabular">{meta}</span>}
     </div>
   )
 }
